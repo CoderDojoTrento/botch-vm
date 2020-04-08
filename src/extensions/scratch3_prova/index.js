@@ -6,7 +6,7 @@ const log = require('../../util/log');
 class Scratch3Prova {
     constructor (runtime) {
         this.runtime = runtime;
-        this.child = "";
+        this.child = '';
     }
 
     getInfo () {
@@ -21,11 +21,11 @@ class Scratch3Prova {
                     arguments: {
                         TEXT_1: {
                             type: ArgumentType.STRING,
-                            defaultValue: "abcde"
+                            defaultValue: 'abcde'
                         },
                         TEXT_2: {
                             type: ArgumentType.STRING,
-                            defaultValue: "fghilm"
+                            defaultValue: 'fghilm'
                         }
                     }
                 },
@@ -36,7 +36,7 @@ class Scratch3Prova {
                     arguments: {
                         TEXT: {
                             type: ArgumentType.STRING,
-                            defaultValue: "aaaaa"
+                            defaultValue: 'aaaaa'
                         }
                     }
                 }
@@ -46,14 +46,14 @@ class Scratch3Prova {
         };
     }
 
-    var1 (args) {
+    var1 () {
         return this.child;
     }
 
     crossover (args) {
-        let text1 = Cast.toString(args.TEXT_1);
-        let text2 = Cast.toString(args.TEXT_2);
-        this.child = text1.slice(0, (text1.length/2)) + text2.slice(text2.length/2, text2.length);
+        const text1 = Cast.toString(args.TEXT_1);
+        const text2 = Cast.toString(args.TEXT_2);
+        this.child = text1.slice(0, (text1.length / 2)) + text2.slice(text2.length / 2, text2.length);
         log.log(this.child);
     }
 }
