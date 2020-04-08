@@ -49,7 +49,9 @@ jobs:
           all_branches: true
           condition: $TRAVIS_EVENT_TYPE != cron
         skip_cleanup: true
-        script: npm run --silent deploy -- -x -r $GH_PAGES_REPO
+        # EvoScratch seems old, replacing with line found in evoscratch-gui
+        #script: npm run --silent deploy -- -x -r $GH_PAGES_REPO
+        script: npm run deploy -- -x -e $TRAVIS_BRANCH -r https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git
       - provider: script
         on:
           branch: 
