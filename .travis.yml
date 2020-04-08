@@ -44,12 +44,12 @@ jobs:
 #        skip_cleanup: true
 #        email: $NPM_EMAIL
 #        api_key: $NPM_TOKEN
-#      - provider: script
-#        on:
-#          all_branches: true
-#          condition: $TRAVIS_EVENT_TYPE != cron
-#        skip_cleanup: true
-#        script: npm run --silent deploy -- -x -r $GH_PAGES_REPO
+      - provider: script
+        on:
+          all_branches: true
+          condition: $TRAVIS_EVENT_TYPE != cron
+        skip_cleanup: true
+        script: npm run --silent deploy -- -x -r $GH_PAGES_REPO
       - provider: script
         on:
           branch: 
