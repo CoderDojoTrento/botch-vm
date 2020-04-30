@@ -12591,9 +12591,20 @@ var RenderWebGL = function (_EventEmitter) {
          * @param {int} pixelsTall The desired height in device-independent pixels.
          */
         value: function resize(pixelsWide, pixelsTall) {
+            var canvas = this._gl.canvas;
+
             var pixelRatio = window.devicePixelRatio || 1;
-            this._gl.canvas.width = pixelsWide * pixelRatio;
-            this._gl.canvas.height = pixelsTall * pixelRatio;
+            var newWidth = pixelsWide * pixelRatio;
+            var newHeight = pixelsTall * pixelRatio;
+
+            // Certain operations, such as moving the color picker, call `resize` once per frame, even though the canvas
+            // size doesn't change. To avoid unnecessary canvas updates, check that we *really* need to resize the canvas.
+            if (canvas.width !== newWidth || canvas.height !== newHeight) {
+                canvas.width = newWidth;
+                canvas.height = newHeight;
+                // Resizing the canvas causes it to be cleared, so redraw it.
+                this.draw();
+            }
         }
 
         /**
@@ -14300,6 +14311,9 @@ var RenderWebGL = function (_EventEmitter) {
         key: '_getConvexHullPointsForDrawable',
         value: function _getConvexHullPointsForDrawable(drawableID) {
             var drawable = this._allDrawables[drawableID];
+
+            drawable.updateMatrix();
+            drawable.skin.updateSilhouette(this._getDrawableScreenSpaceScale(drawable));
 
             var _drawable$skin$size = _slicedToArray(drawable.skin.size, 2),
                 width = _drawable$skin$size[0],
