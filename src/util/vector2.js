@@ -12,7 +12,7 @@ class Vector2 {
      * @chainable
      */
 
-    sum (x, y) {
+    add (x, y) {
         if (x instanceof Vector2) {
             this.x += x.x;
             this.y += x.y;
@@ -26,6 +26,30 @@ class Vector2 {
         this.y += y;
         return this;
         
+    }
+
+    /**
+     * Sum two vector and create a new one
+     * @param {Vector2} v1
+     * @param {Vector2} v2
+     */
+
+    static add (v1, v2) {
+        const nv = new Vector2(v1.x, v1.y);
+        nv.sum(v2);
+        return nv;
+    }
+
+    /**
+     * Sub two vector and create a new one
+     * @param {Vector2} v1
+     * @param {Vector2} v2
+     */
+
+    static sub (v1, v2) {
+        const nv = new Vector2(v1.x, v1.y);
+        nv.sub(v2);
+        return nv;
     }
 
     /**
