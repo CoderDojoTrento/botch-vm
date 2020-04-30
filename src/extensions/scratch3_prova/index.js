@@ -9,7 +9,7 @@ class Scratch3Prova {
     constructor (runtime) {
         this.runtime = runtime;
         this.child = '';
-        this.vehicle = null;
+        this.vehicleMap = new Map();
     }
 
     getInfo () {
@@ -72,13 +72,13 @@ class Scratch3Prova {
         return this.child;
     }
 
-    crossover (args /* , util */) {
+    crossover (args/* , util */) {
         const text1 = Cast.toString(args.TEXT_1);
         const text2 = Cast.toString(args.TEXT_2);
         this.child = text1.slice(0, (text1.length / 2)) + text2.slice(text2.length / 2, text2.length);
         log.log(this.child);
         /* console.log('args =', args);
-        console.log('util = ', util); */
+        console.log('util = ', util.target.id); */
     }
 
     /**
@@ -110,19 +110,19 @@ class Scratch3Prova {
 
     seek (args, util) {
 
-        // Check if is already instantiated, this works only with ONE sprite
-        if (!this.vehicle) {
-            this.vehicle = new Vehicle(util.target.x, util.target.y, util.target);
+        // Check if is already instantiated
+        if (!this.vehicleMap.get(util.target.id)) {
+            this.vehicleMap.set(util.target.id, (new Vehicle(util.target.x, util.target.y, util.target)));
         }
         
-        // Get the target position, again, works only with ONE sprite
+        // Get the target position
         const pointTarget = this.runtime.getSpriteTargetByName(args.TARGET);
         if (!pointTarget) return;
         const targetX = pointTarget.x;
         const targetY = pointTarget.y;
 
-        this.vehicle.seek(targetX, targetY);
-        this.vehicle.update();
+        this.vehicleMap.get(util.target.id).seek(targetX, targetY);
+        this.vehicleMap.get(util.target.id).update();
         this.point(args, util);
 
         /*  console.log('args =', args);
