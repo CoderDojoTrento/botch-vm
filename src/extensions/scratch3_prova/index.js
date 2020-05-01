@@ -1,3 +1,4 @@
+/* eslint-disable no-negated-condition */
 const ArgumentType = require('../../extension-support/argument-type');
 const BlockType = require('../../extension-support/block-type');
 const Cast = require('../../util/cast');
@@ -46,11 +47,19 @@ class Scratch3Prova {
                 {
                     opcode: 'seek',
                     blockType: BlockType.COMMAND,
-                    text: 'seek [TARGET]',
+                    text: 'seek [TARGET] with mass [MASS] and agility [AGILITY]',
                     arguments: {
                         TARGET: {
                             type: ArgumentType.STRING,
                             menu: 'getSprite'
+                        },
+                        MASS: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: 1
+                        },
+                        AGILITY: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: 0.3
                         }
                     }
                 }
@@ -109,21 +118,25 @@ class Scratch3Prova {
      */
 
     seek (args, util) {
-
         // Check if is already instantiated
         if (!this.vehicleMap.get(util.target.id)) {
-            this.vehicleMap.set(util.target.id, (new Vehicle(util.target.x, util.target.y, util.target)));
-        }
-        
-        // Get the target position
-        const pointTarget = this.runtime.getSpriteTargetByName(args.TARGET);
-        if (!pointTarget) return;
-        const targetX = pointTarget.x;
-        const targetY = pointTarget.y;
+            this.vehicleMap.set(util.target.id, (
+                new Vehicle(util.target.x, util.target.y, parseFloat(args.MASS), parseFloat(args.AGILITY), util.target)
+            ));
+        } else {
+            // This line can be more efficient
+            this.vehicleMap.get(util.target.id).changeArgs(args.MASS, args.AGILITY);
 
-        this.vehicleMap.get(util.target.id).seek(targetX, targetY);
-        this.vehicleMap.get(util.target.id).update();
-        this.point(args, util);
+            // Get the target position
+            const pointTarget = this.runtime.getSpriteTargetByName(args.TARGET);
+            if (!pointTarget) return;
+            const targetX = pointTarget.x;
+            const targetY = pointTarget.y;
+
+            this.vehicleMap.get(util.target.id).seek(targetX, targetY);
+            this.vehicleMap.get(util.target.id).update();
+            this.point(args, util);
+        }
 
         /*  console.log('args =', args);
         console.log('util = ', util); */
