@@ -62,6 +62,25 @@ class Scratch3Prova {
                             defaultValue: 0.3
                         }
                     }
+                },
+                {
+                    opcode: 'createPopulation',
+                    blockType: BlockType.COMMAND,
+                    text: 'create [COPIES] copies',
+                    arguments: {
+                        COPIES: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: 1
+                        }
+                    }
+                },
+                {
+                    opcode: 'makeChild',
+                    blockType: BlockType.COMMAND,
+                    text: 'generate new child',
+                    arguments: {
+                        
+                    }
                 }
             ],
             menus: {
@@ -81,13 +100,14 @@ class Scratch3Prova {
         return this.child;
     }
 
-    crossover (args/* , util */) {
+    crossover (args, util) {
+        console.log(this);
+        console.log(args);
+        console.log(util);
         const text1 = Cast.toString(args.TEXT_1);
         const text2 = Cast.toString(args.TEXT_2);
         this.child = text1.slice(0, (text1.length / 2)) + text2.slice(text2.length / 2, text2.length);
         log.log(this.child);
-        /* console.log('args =', args);
-        console.log('util = ', util.target.id); */
     }
 
     /**
@@ -121,7 +141,11 @@ class Scratch3Prova {
         // Check if is already instantiated
         if (!this.vehicleMap.get(util.target.id)) {
             this.vehicleMap.set(util.target.id, (
-                new Vehicle(util.target.x, util.target.y, parseFloat(args.MASS), parseFloat(args.AGILITY), util.target)
+                new Vehicle(
+                    util.target.x, util.target.y,
+                    /* (util.size * util.size / 200) + 0.2 */ parseFloat(args.MASS),
+                    parseFloat(args.AGILITY), util.target
+                )
             ));
         } else {
             // This line can be more efficient
@@ -137,10 +161,41 @@ class Scratch3Prova {
             this.vehicleMap.get(util.target.id).update();
             this.point(args, util);
         }
+    }
 
-        /*  console.log('args =', args);
-        console.log('util = ', util); */
-        
+    createPopulation (args, util) {
+        const copies = Cast.toString(args.COPIES);
+        if (copies > 0 && copies <= 30) {
+            for (let i = 0; i < copies; i++) {
+                // Set clone target
+                const cloneTarget = util.target;
+                
+                // If clone target is not found, return
+                if (!cloneTarget) return;
+
+                // Create clone
+                const newClone = cloneTarget.makeClone();
+                if (newClone) {
+                    this.runtime.addTarget(newClone);
+
+                    // Place behind the original target.
+                    newClone.goBehindOther(cloneTarget);
+                    // Set a random size
+                    newClone.setSize((Math.random() * 100) + 30);
+                    // Move back the clone to not overlap
+                    newClone.setXY(util.target.x - (20 * i), util.target.y);
+                }
+            }
+        }
+    }
+
+    makeChild (args, util) {
+        // Select all the clone of the sprite
+        const clones = this.runtime.targets.filter(
+            t => !t.isOriginal && !t.isStage && t.sprite.clones[0].id === util.target.id
+        );
+
+        return clones;
     }
 }
 
