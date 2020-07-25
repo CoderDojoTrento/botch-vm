@@ -1,3 +1,11 @@
+let _TextEncoder;
+if (typeof TextEncoder === 'undefined') {
+    _TextEncoder = require('text-encoding').TextEncoder;
+} else {
+    /* global TextEncoder */
+    _TextEncoder = TextEncoder;
+}
+
 /* eslint-disable no-negated-condition */
 const ArgumentType = require('../../extension-support/argument-type');
 const BlockType = require('../../extension-support/block-type');
@@ -5,13 +13,100 @@ const Cast = require('../../util/cast');
 const MathUtil = require('../../util/math-util');
 const log = require('../../util/log');
 const Vehicle = require('./vehicle');
+const svgen = require('../../util/svg-generator');
+const {loadCostume} = require('../../import/load-costume.js');
+
+/*
+ * Create the new costume asset for the VM
+ */
+const createVMAsset = function (storage, assetType, dataFormat, data) {
+    const asset = storage.createAsset(
+        assetType,
+        dataFormat,
+        data,
+        null,
+        true // generate md5
+    );
+
+    return {
+        name: null, // Needs to be set by caller
+        dataFormat: dataFormat,
+        asset: asset,
+        md5: `${asset.assetId}.${dataFormat}`,
+        assetId: asset.assetId
+    };
+};
 
 class Scratch3Prova {
     constructor (runtime) {
         this.runtime = runtime;
         this.child = '';
         this.vehicleMap = new Map();
+        this.storage = runtime.storage;
     }
+
+    // <LOAD COSTUMES METHODS>
+
+    /**
+     * COPIED AND ADAPTED FROM virtual-machine.js
+     * Add a costume to the current editing target.
+     * @param {string} md5ext - the MD5 and extension of the costume to be loaded.
+     * @param {!object} costumeObject Object representing the costume.
+     * @param {string} optTargetId - the id of the target to add to, if not the editing target.
+     * @param {string} optVersion - if this is 2, load costume as sb2, otherwise load costume as sb3.
+     * @returns {?Promise} - a promise that resolves when the costume has been added
+     */
+    addCostume (md5ext, costumeObject, optTargetId, optVersion) {
+        const target = optTargetId ? this.runtime.getTargetById(optTargetId) :
+            this.runtime.getEditingTarget();
+        if (target) {
+            return loadCostume(md5ext, costumeObject, this.runtime, optVersion).then(() => {
+                target.addCostume(costumeObject);
+                target.setCostume(
+                    target.getCostumes().length - 1
+                );
+                this.runtime.emitProjectChanged();
+            });
+        }
+        // If the target cannot be found by id, return a rejected promise
+        return Promise.reject();
+    }
+
+    handleNewCostume (costume, id) {
+        const costumes = Array.isArray(costume) ? costume : [costume];
+        return Promise.all(costumes.map(c => this.addCostume(c.md5, c, id)));
+    }
+    
+    handleCostume (vmCostumes, id) {
+        vmCostumes.forEach((costume, i) => {
+            costume.name = `${i}${i ? i + 1 : ''}`;
+        });
+        this.handleNewCostume(vmCostumes, id); // Tolto .then(
+    }
+
+    addCostumeFromBuffer (dataBuffer, id) {
+        const costumeFormat_ = this.storage.DataFormat.SVG;
+        const assetType_ = this.storage.AssetType.ImageVector;
+        const storage_ = this.storage;
+        const vmCostume = createVMAsset(
+            storage_,
+            assetType_,
+            costumeFormat_,
+            dataBuffer
+        );
+        this.handleCostume([vmCostume], id);
+    }
+
+    /**
+     * Assign a new costume (SVG) to the selected target (id)
+     * @param {string} fileData string of the svg
+     * @param {string?} id id of the target
+     */
+    uploadCostumeEdit (fileData, id) {
+        this.addCostumeFromBuffer(new Uint8Array((new _TextEncoder()).encode(fileData)), id);
+    }
+
+    // </LOAD COSTUMES METHODS>
 
     getInfo () {
         return {
@@ -66,7 +161,7 @@ class Scratch3Prova {
                 {
                     opcode: 'createPopulation',
                     blockType: BlockType.COMMAND,
-                    text: 'create [COPIES] copies',
+                    text: 'create population of [COPIES] copies',
                     arguments: {
                         COPIES: {
                             type: ArgumentType.NUMBER,
@@ -93,7 +188,9 @@ class Scratch3Prova {
     }
 
     getSpriteMenu () {
-        return this.runtime.targets.filter(t => t.isOriginal && !t.isStage).map(t => t.getName());
+        if (this.runtime.targets.length > 1) {
+            return this.runtime.targets.filter(t => t.isOriginal && !t.isStage).map(t => t.getName());
+        }
     }
 
     var1 () {
@@ -104,6 +201,7 @@ class Scratch3Prova {
         console.log(this);
         console.log(args);
         console.log(util);
+
         const text1 = Cast.toString(args.TEXT_1);
         const text2 = Cast.toString(args.TEXT_2);
         this.child = text1.slice(0, (text1.length / 2)) + text2.slice(text2.length / 2, text2.length);
@@ -184,6 +282,13 @@ class Scratch3Prova {
                     newClone.setSize((Math.random() * 100) + 30);
                     // Move back the clone to not overlap
                     newClone.setXY(util.target.x - (20 * i), util.target.y);
+
+                    const newsvg = new svgen(100, 100).generateSVG();
+
+                    this.uploadCostumeEdit(newsvg, newClone.id);
+
+                    // Add new costume to the new clone
+                    // newClone.setCostume(1);
                 }
             }
         }
