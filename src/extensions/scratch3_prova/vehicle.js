@@ -1,12 +1,12 @@
 const vector2 = require('../../util/vector2');
 
 class Vehicle {
-    constructor (x, y, mass_, maxforce_, sprite_) {
+    constructor (x, y, mass_, maxForce_, sprite_) {
         this.acceleration = new vector2(0, 0);
         this.velocity = new vector2(0, 2);
         this.position = new vector2(x, y);
-        this.maxspeed = 8;
-        this.maxforce = maxforce_; // agility ?
+        this.maxSpeed = 8;
+        this.maxForce = maxForce_; // agility ?
         this.sprite = sprite_;
         this.mass = mass_;
     }
@@ -15,18 +15,18 @@ class Vehicle {
      * Since that the object will be instantiated only once, this function
      * will change the new arguments that will be passed.
      *
-     * If we change manually the position, mass or maxforce of the sprite
+     * If we change manually the position, mass or maxForce of the sprite
      * @param {Number} x_
      * @param {Number} y_
      * @param {Number} mass_
-     * @param {Number} maxforce_
+     * @param {Number} maxForce_
      */
 
-    changeArgs (mass_, maxforce_) {
+    changeArgs (mass_, maxForce_) {
         this.position.x = parseFloat(this.sprite.x);
         this.position.y = parseFloat(this.sprite.y);
         this.mass = parseFloat(mass_);
-        this.maxforce = parseFloat(maxforce_);
+        this.maxForce = parseFloat(maxForce_);
     }
 
     // Method to update location
@@ -34,9 +34,9 @@ class Vehicle {
         // Update velocity
         this.velocity.add(this.acceleration);
         // Limit speed
-        this.velocity.limit(this.maxspeed);
+        this.velocity.limit(this.maxSpeed);
         this.position.add(this.velocity);
-        // Update sprite postion
+        // Update sprite position
         this.sprite.setXY(this.position.x, this.position.y);
         // Reset acceleration 0 each cycle
         this.acceleration.mult(0);
@@ -60,11 +60,11 @@ class Vehicle {
         const desired = vector2.sub(target, this.position); // A vector pointing from the location to the target
   
         // Scale to maximum speed
-        desired.setMag(this.maxspeed);
+        desired.setMag(this.maxSpeed);
   
         // Steering = Desired minus velocity
         const steer = vector2.sub(desired, this.velocity);
-        steer.limit(this.maxforce); // Limit to maximum steering force
+        steer.limit(this.maxForce); // Limit to maximum steering force
   
         this.applyForce(steer);
     }

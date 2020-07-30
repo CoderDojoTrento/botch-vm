@@ -13,7 +13,10 @@ const Cast = require('../../util/cast');
 const MathUtil = require('../../util/math-util');
 const log = require('../../util/log');
 const Vehicle = require('./vehicle');
+const Organism = require('./organism');
 const svgen = require('../../util/svg-generator');
+const Food = require('./food');
+const Poison = require('./poison');
 const {loadCostume} = require('../../import/load-costume.js');
 
 /*
@@ -42,7 +45,11 @@ class Scratch3Prova {
         this.runtime = runtime;
         this.child = '';
         this.vehicleMap = new Map();
+        this.organismMap = new Map();
+        this.inhabitantsMap = new Map();
         this.storage = runtime.storage;
+        this.food = [];
+        this.poison = [];
     }
 
     // <LOAD COSTUMES METHODS>
@@ -170,12 +177,14 @@ class Scratch3Prova {
                     }
                 },
                 {
-                    opcode: 'makeChild',
+                    opcode: 'defineFood',
                     blockType: BlockType.COMMAND,
-                    text: 'generate new child',
-                    arguments: {
-                        
-                    }
+                    text: 'define as food'
+                },
+                {
+                    opcode: 'definePoison',
+                    blockType: BlockType.COMMAND,
+                    text: 'define as poison'
                 }
             ],
             menus: {
@@ -188,6 +197,7 @@ class Scratch3Prova {
     }
 
     getSpriteMenu () {
+        // TODO remove _editingTarget from menu
         if (this.runtime.targets.length > 1) {
             return this.runtime.targets.filter(t => t.isOriginal && !t.isStage).map(t => t.getName());
         }
@@ -236,17 +246,41 @@ class Scratch3Prova {
      */
 
     seek (args, util) {
+        this.refreshClonesMap(util.target.id);
+        // if there is no organism, seek works with common sprites
+        if (!this.organismMap.get(util.target.id)) {
+            this.seekVehicle(args, util);
+        } else {
+            this.seekOrganism(args, util);
+        }
+    }
+
+    seekOrganism (args, util) {
+        // This line can be more efficient TODO
+        this.organismMap.get(util.target.id).changeArgs(args.MASS, args.AGILITY);
+
+        // Get the target position
+        const pointTarget = this.runtime.getSpriteTargetByName(args.TARGET);
+        if (!pointTarget) return;
+        const targetX = pointTarget.x;
+        const targetY = pointTarget.y;
+
+        this.organismMap.get(util.target.id).seek(targetX, targetY);
+        this.organismMap.get(util.target.id).update();
+        this.point(args, util);
+    }
+
+    seekVehicle (args, util) {
         // Check if is already instantiated
         if (!this.vehicleMap.get(util.target.id)) {
             this.vehicleMap.set(util.target.id, (
                 new Vehicle(
-                    util.target.x, util.target.y,
-                    /* (util.size * util.size / 200) + 0.2 */ parseFloat(args.MASS),
+                    util.target.x, util.target.y, parseFloat(args.MASS),
                     parseFloat(args.AGILITY), util.target
                 )
             ));
         } else {
-            // This line can be more efficient
+            // This line can be more efficient TODO
             this.vehicleMap.get(util.target.id).changeArgs(args.MASS, args.AGILITY);
 
             // Get the target position
@@ -262,6 +296,9 @@ class Scratch3Prova {
     }
 
     createPopulation (args, util) {
+        this.deleteClones(util.target.id);
+        this.refreshClonesMap(util.target.id); // reset the clones
+
         const copies = Cast.toString(args.COPIES);
         if (copies > 0 && copies <= 30) {
             for (let i = 0; i < copies; i++) {
@@ -283,9 +320,12 @@ class Scratch3Prova {
                     // Move back the clone to not overlap
                     newClone.setXY(util.target.x - (20 * i), util.target.y);
 
-                    const newsvg = new svgen(100, 100).generateSVG();
+                    const newSvg = new svgen(100, 100).generateSVG();
 
-                    this.uploadCostumeEdit(newsvg, newClone.id);
+                    this.organismMap.set(newClone.id, new Organism(
+                        newClone.x, newClone.y, 1, 1, newClone, newSvg, 'dna'));
+
+                    this.uploadCostumeEdit(newSvg, newClone.id);
 
                     // Add new costume to the new clone
                     // newClone.setCostume(1);
@@ -294,13 +334,130 @@ class Scratch3Prova {
         }
     }
 
-    makeChild (args, util) {
-        // Select all the clone of the sprite
-        const clones = this.runtime.targets.filter(
-            t => !t.isOriginal && !t.isStage && t.sprite.clones[0].id === util.target.id
-        );
+    /**
+     * Delete all the clones of a target
+     * @param {string} id id of the target (not a clone)
+     */
+    deleteClones (id) {
+        const clones = this.getClones(id);
+        clones.forEach(c => {
+            this.runtime.disposeTarget(c);
+            this.runtime.stopForTarget(c);
+        });
+    }
 
-        return clones;
+    /**
+     * Refresh the clone Map
+     * @param {string} id id of the target (not the clone)
+     */
+    refreshClonesMap (id) {
+        this.organismMap = this.getCloneMap(id);
+    }
+
+    /**
+     * Get all the clones (only) of the selected target (not a clone)
+     * @param {string} id id of the target
+     * @returns {clones[]} list of clones
+     */
+    getClones (id) {
+        // Select all the clone of the sprite
+        return this.runtime.targets.filter(
+            t => !t.isOriginal && !t.isStage && t.sprite.clones[0].id === id
+        );
+    }
+
+    /**
+     * Return the clone map
+     * @param {string} id the id of the target (not the clone)
+     * @returns {Map<id, clone>} map of the clones
+     */
+    getCloneMap (id) {
+        const clones = this.getClones(id);
+        const map = new Map();
+        clones.forEach(c => {
+            map.set(c.id, c);
+        });
+        return map;
+    }
+
+    /**
+     * Create clones of the selected sprite as "food"
+     * @param {*} args args
+     * @param {*} util util
+     */
+    defineFood (args, util) {
+        this.deleteClones(util.target.id);
+        this.food = [];
+        this.food.push((new Food(util.target.x, util.target.y)));
+
+        // Create maximum 7 clones
+        const foodN = (Math.random() * 7) + 1;
+        for (let i = 0; i < foodN; i++) {
+            // Set clone target
+            const cloneTarget = util.target;
+            
+            // If clone target is not found, return
+            if (!cloneTarget) return;
+
+            // Create clone
+            const newClone = cloneTarget.makeClone();
+            if (newClone) {
+                this.runtime.addTarget(newClone);
+
+                // Place behind the original target.
+                newClone.goBehindOther(cloneTarget);
+                
+                const stageW = this.runtime.constructor.STAGE_WIDTH;
+                const stageH = this.runtime.constructor.STAGE_HEIGHT;
+                // Move in a random position and avoid that anyone is touching the other
+                let maxIt = 20; // Max 20 try to find a place where is not touch other clones
+                while (newClone.isTouchingSprite(util.target.sprite.name) && maxIt > 0) {
+                    newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
+                    maxIt--;
+                }
+                this.food.push((new Food(newClone.x, newClone.y)));
+            }
+        }
+    }
+
+    /**
+     * Create clones of the selected sprite as "poison"
+     * @param {*} args args
+     * @param {*} util util
+     */
+    definePoison (args, util) {
+        this.deleteClones(util.target.id);
+        this.poison = [];
+        this.poison.push((new Poison(util.target.x, util.target.y)));
+
+        // Create maximum 5 clones
+        const poiN = (Math.random() * 5) + 1;
+        for (let i = 0; i < poiN; i++) {
+            // Set clone target
+            const cloneTarget = util.target;
+            
+            // If clone target is not found, return
+            if (!cloneTarget) return;
+
+            // Create clone
+            const newClone = cloneTarget.makeClone();
+            if (newClone) {
+                this.runtime.addTarget(newClone);
+
+                // Place behind the original target.
+                newClone.goBehindOther(cloneTarget);
+                
+                const stageW = this.runtime.constructor.STAGE_WIDTH;
+                const stageH = this.runtime.constructor.STAGE_HEIGHT;
+                // Move in a random position and avoid that anyone is touching the other
+                let maxIt = 20; // Max 20 try to find a place where is not touch other clones
+                while (newClone.isTouchingSprite(util.target.sprite.name) && maxIt > 0) {
+                    newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
+                    maxIt--;
+                }
+                this.poison.push((new Poison(newClone.x, newClone.y)));
+            }
+        }
     }
 }
 
