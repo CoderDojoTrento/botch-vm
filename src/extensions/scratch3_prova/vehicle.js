@@ -1,13 +1,13 @@
 const vector2 = require('../../util/vector2');
 
 class Vehicle {
-    constructor (x, y, mass_, maxForce_, sprite_) {
+    constructor (x, y, mass_, maxForce_, target_) {
         this.acceleration = new vector2(0, 0);
         this.velocity = new vector2(0, 2);
         this.position = new vector2(x, y);
-        this.maxSpeed = 8;
+        this.maxSpeed = 5;
         this.maxForce = maxForce_; // agility ?
-        this.sprite = sprite_;
+        this.target = target_;
         this.mass = mass_;
     }
   
@@ -23,8 +23,8 @@ class Vehicle {
      */
 
     changeArgs (mass_, maxForce_) {
-        this.position.x = parseFloat(this.sprite.x);
-        this.position.y = parseFloat(this.sprite.y);
+        this.position.x = parseFloat(this.target.x);
+        this.position.y = parseFloat(this.target.y);
         this.mass = parseFloat(mass_);
         this.maxForce = parseFloat(maxForce_);
     }
@@ -37,7 +37,7 @@ class Vehicle {
         this.velocity.limit(this.maxSpeed);
         this.position.add(this.velocity);
         // Update sprite position
-        this.sprite.setXY(this.position.x, this.position.y);
+        this.target.setXY(this.position.x, this.position.y);
         // Reset acceleration 0 each cycle
         this.acceleration.mult(0);
     }
@@ -55,9 +55,9 @@ class Vehicle {
     // STEER = DESIRED MINUS VELOCITY
     seek (x_, y_) {
 
-        const target = new vector2(x_, y_);
+        const targetS = new vector2(x_, y_);
 
-        const desired = vector2.sub(target, this.position); // A vector pointing from the location to the target
+        const desired = vector2.sub(targetS, this.position); // A vector pointing from the location to the target
   
         // Scale to maximum speed
         desired.setMag(this.maxSpeed);
@@ -67,10 +67,6 @@ class Vehicle {
         steer.limit(this.maxForce); // Limit to maximum steering force
   
         this.applyForce(steer);
-    }
-  
-    display () {
-        
     }
 }
 

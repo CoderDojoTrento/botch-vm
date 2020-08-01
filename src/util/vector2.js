@@ -158,6 +158,21 @@ class Vector2 {
     setMag (n) {
         return this.normalize().mult(n);
     }
+
+    copy () {
+        return new Vector2(this.x, this.y);
+    }
+
+    /**
+     * Return the euclidean distance
+     * @param {Vector2} v vector 1
+     * @returns {number} distance
+     */
+    dist (v) {
+        // const tmp = this;
+        return v.copy().sub(this)
+            .mag();
+    }
       
 }
 

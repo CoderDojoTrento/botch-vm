@@ -50,6 +50,8 @@ class Scratch3Prova {
         this.storage = runtime.storage;
         this.food = [];
         this.poison = [];
+        this.maxForce = 0.5;
+        this.mass = 1;
     }
 
     // <LOAD COSTUMES METHODS>
@@ -166,6 +168,11 @@ class Scratch3Prova {
                     }
                 },
                 {
+                    opcode: 'seekFood',
+                    blockType: BlockType.COMMAND,
+                    text: 'seek food'
+                },
+                {
                     opcode: 'createPopulation',
                     blockType: BlockType.COMMAND,
                     text: 'create population of [COPIES] copies',
@@ -280,7 +287,7 @@ class Scratch3Prova {
                 )
             ));
         } else {
-            // This line can be more efficient TODO
+            // This line can be more efficient ?
             this.vehicleMap.get(util.target.id).changeArgs(args.MASS, args.AGILITY);
 
             // Get the target position
@@ -291,13 +298,36 @@ class Scratch3Prova {
 
             this.vehicleMap.get(util.target.id).seek(targetX, targetY);
             this.vehicleMap.get(util.target.id).update();
-            this.point(args, util);
+            this.point(args, util); // Questo a dir la verità funziona solo con l'originale
+        }
+    }
+
+    /**
+     * Seek all the food
+     * @param {args} args args
+     * @param {util} util util
+     * @returns {string} message
+     */
+    seekFood (args, util) {
+        // this.refreshClonesMap(util.target.id);
+        if (this.food.length > 0) {
+            for (const org of this.organismMap.values()) {
+                org.seekFood(this.food);
+                org.update();
+            }
+        } else {
+            return 'I need food';
         }
     }
 
     createPopulation (args, util) {
         this.deleteClones(util.target.id);
-        this.refreshClonesMap(util.target.id); // reset the clones
+        // this.refreshClonesMap(util.target.id); // reset the clones
+        this.organismMap = new Map();
+        this.organismMap.set(util.target.id,
+            new Organism(
+                util.target.x, util.target.x, this.mass, this.maxForce, util.target
+            )); // check if is need to delete this entry somewhere TODO
 
         const copies = Cast.toString(args.COPIES);
         if (copies > 0 && copies <= 30) {
@@ -323,7 +353,7 @@ class Scratch3Prova {
                     const newSvg = new svgen(100, 100).generateSVG();
 
                     this.organismMap.set(newClone.id, new Organism(
-                        newClone.x, newClone.y, 1, 1, newClone, newSvg, 'dna'));
+                        newClone.x, newClone.y, this.mass, this.maxForce, newClone, newSvg));
 
                     this.uploadCostumeEdit(newSvg, newClone.id);
 
@@ -367,6 +397,7 @@ class Scratch3Prova {
     }
 
     /**
+     * DEPRECATED
      * Return the clone map
      * @param {string} id the id of the target (not the clone)
      * @returns {Map<id, clone>} map of the clones
@@ -375,7 +406,7 @@ class Scratch3Prova {
         const clones = this.getClones(id);
         const map = new Map();
         clones.forEach(c => {
-            map.set(c.id, c);
+            map.set(c.id, c); // WRONG ASSIGNMENT TO MAP VALUE
         });
         return map;
     }
