@@ -52,7 +52,7 @@ class Organism extends Vehicle {
             // If is close to food (eat) change the position if is original
             // otherwise delete the clone
             // Easier
-            if (this.isTouchingObject(f)) { // there is no isTouchingSprite() with a specific ID
+            if (d < 30) { // (this.isTouchingObject(f)) { // there is no isTouchingSprite() with a specific ID
                 this.health += nutrition;
                 if (f.isOriginal) {
                     f.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
