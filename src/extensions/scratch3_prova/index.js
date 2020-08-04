@@ -15,8 +15,6 @@ const log = require('../../util/log');
 const Vehicle = require('./vehicle');
 const Organism = require('./organism');
 const svgen = require('../../util/svg-generator');
-const Food = require('./food');
-const Poison = require('./poison');
 const {loadCostume} = require('../../import/load-costume.js');
 
 /*
@@ -48,8 +46,8 @@ class Scratch3Prova {
         this.organismMap = new Map();
         this.inhabitantsMap = new Map();
         this.storage = runtime.storage;
-        this.food = [];
-        this.poison = [];
+        this.food = new Map();
+        this.poison = new Map();
         this.maxForce = 0.5;
         this.mass = 1;
     }
@@ -168,9 +166,9 @@ class Scratch3Prova {
                     }
                 },
                 {
-                    opcode: 'seekFood',
+                    opcode: 'behaviors',
                     blockType: BlockType.COMMAND,
-                    text: 'seek food'
+                    text: 'behave'
                 },
                 {
                     opcode: 'createPopulation',
@@ -186,12 +184,46 @@ class Scratch3Prova {
                 {
                     opcode: 'defineFood',
                     blockType: BlockType.COMMAND,
-                    text: 'define as food'
+                    text: 'generate max: [FOOD] food',
+                    arguments: {
+                        FOOD: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: 8
+                        }
+                    }
                 },
                 {
                     opcode: 'definePoison',
                     blockType: BlockType.COMMAND,
-                    text: 'define as poison'
+                    text: 'generate max: [POISON] poison',
+                    arguments: {
+                        POISON: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: 2
+                        }
+                    }
+                },
+                {
+                    opcode: 'createFood',
+                    blockType: BlockType.COMMAND,
+                    text: 'add new food with [FREQUENCY] %',
+                    arguments: {
+                        FREQUENCY: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: 5
+                        }
+                    }
+                },
+                {
+                    opcode: 'createPoison',
+                    blockType: BlockType.COMMAND,
+                    text: 'add new poison with [FREQUENCY] %',
+                    arguments: {
+                        FREQUENCY: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: 2
+                        }
+                    }
                 }
             ],
             menus: {
@@ -253,7 +285,7 @@ class Scratch3Prova {
      */
 
     seek (args, util) {
-        this.refreshClonesMap(util.target.id);
+        // this.refreshClonesMap(util.target.id);
         // if there is no organism, seek works with common sprites
         if (!this.organismMap.get(util.target.id)) {
             this.seekVehicle(args, util);
@@ -264,7 +296,7 @@ class Scratch3Prova {
 
     seekOrganism (args, util) {
         // This line can be more efficient TODO
-        this.organismMap.get(util.target.id).changeArgs(args.MASS, args.AGILITY);
+        this.organismMap.get(util.target.id).refreshArgs(args.MASS, args.AGILITY);
 
         // Get the target position
         const pointTarget = this.runtime.getSpriteTargetByName(args.TARGET);
@@ -274,7 +306,7 @@ class Scratch3Prova {
 
         this.organismMap.get(util.target.id).seek(targetX, targetY);
         this.organismMap.get(util.target.id).update();
-        this.point(args, util);
+        this.organismMap.get(util.target.id).pointTarget();
     }
 
     seekVehicle (args, util) {
@@ -282,13 +314,13 @@ class Scratch3Prova {
         if (!this.vehicleMap.get(util.target.id)) {
             this.vehicleMap.set(util.target.id, (
                 new Vehicle(
-                    util.target.x, util.target.y, parseFloat(args.MASS),
-                    parseFloat(args.AGILITY), util.target
+                    util.target, parseFloat(args.MASS),
+                    parseFloat(args.AGILITY)
                 )
             ));
         } else {
             // This line can be more efficient ?
-            this.vehicleMap.get(util.target.id).changeArgs(args.MASS, args.AGILITY);
+            this.vehicleMap.get(util.target.id).refreshArgs(args.MASS, args.AGILITY);
 
             // Get the target position
             const pointTarget = this.runtime.getSpriteTargetByName(args.TARGET);
@@ -298,62 +330,68 @@ class Scratch3Prova {
 
             this.vehicleMap.get(util.target.id).seek(targetX, targetY);
             this.vehicleMap.get(util.target.id).update();
-            this.point(args, util); // Questo a dir la verità funziona solo con l'originale
+            this.vehicleMap.get(util.target.id).pointTarget();
         }
     }
 
     /**
-     * Seek all the food
+     * Behave with the food and poison
      * @param {args} args args
      * @param {util} util util
      * @returns {string} message
      */
-    seekFood (args, util) {
-        // this.refreshClonesMap(util.target.id);
-        if (this.food.length > 0) {
+    behaviors () {
+        if (this.poison.size > 0 && this.food.size > 0) {
             for (const org of this.organismMap.values()) {
-                org.seekFood(this.food);
+                org.boundaries(
+                    this.runtime.constructor.STAGE_WIDTH,
+                    this.runtime.constructor.STAGE_HEIGHT);
+                org.refreshArgs(this.mass, this.maxForce);
+                org.behaviors(this.food, this.poison);
                 org.update();
+
+                if (org.dead()) {
+                    console.log('morto'); // TODO vedere come (e se) eliminare lo sprite
+                    /* if (!org.isOriginal) {
+                        this.runtime.disposeTarget(org);
+                        this.runtime.stopForTarget(org);
+                        this.organismMap.delete(org.id);
+                    } */
+                }
             }
         } else {
-            return 'I need food';
+            return 'I need food or poison';
         }
     }
 
     createPopulation (args, util) {
         this.deleteClones(util.target.id);
-        // this.refreshClonesMap(util.target.id); // reset the clones
+        util.target.goToFront();
         this.organismMap = new Map();
         this.organismMap.set(util.target.id,
             new Organism(
-                util.target.x, util.target.x, this.mass, this.maxForce, util.target
+                util.target, this.mass, this.maxForce, 'svg'
             )); // check if is need to delete this entry somewhere TODO
 
         const copies = Cast.toString(args.COPIES);
         if (copies > 0 && copies <= 30) {
             for (let i = 0; i < copies; i++) {
-                // Set clone target
-                const cloneTarget = util.target;
-                
-                // If clone target is not found, return
-                if (!cloneTarget) return;
-
                 // Create clone
-                const newClone = cloneTarget.makeClone();
+                const newClone = this.createClone(util.target);
                 if (newClone) {
                     this.runtime.addTarget(newClone);
 
                     // Place behind the original target.
-                    newClone.goBehindOther(cloneTarget);
+                    newClone.goBehindOther(util.target);
                     // Set a random size
                     newClone.setSize((Math.random() * 100) + 30);
                     // Move back the clone to not overlap
                     newClone.setXY(util.target.x - (20 * i), util.target.y);
 
-                    const newSvg = new svgen(100, 100).generateSVG();
+                    const newSvg = new svgen(100, 100).generateSvgObj1();
 
                     this.organismMap.set(newClone.id, new Organism(
-                        newClone.x, newClone.y, this.mass, this.maxForce, newClone, newSvg));
+                        newClone, this.mass, this.maxForce, newSvg));
 
                     this.uploadCostumeEdit(newSvg, newClone.id);
 
@@ -377,14 +415,6 @@ class Scratch3Prova {
     }
 
     /**
-     * Refresh the clone Map
-     * @param {string} id id of the target (not the clone)
-     */
-    refreshClonesMap (id) {
-        this.organismMap = this.getCloneMap(id);
-    }
-
-    /**
      * Get all the clones (only) of the selected target (not a clone)
      * @param {string} id id of the target
      * @returns {clones[]} list of clones
@@ -397,18 +427,19 @@ class Scratch3Prova {
     }
 
     /**
-     * DEPRECATED
-     * Return the clone map
-     * @param {string} id the id of the target (not the clone)
-     * @returns {Map<id, clone>} map of the clones
+     * Create a clone of a given target
+     * @param {target} target target
+     * @returns {clone} new clone
      */
-    getCloneMap (id) {
-        const clones = this.getClones(id);
-        const map = new Map();
-        clones.forEach(c => {
-            map.set(c.id, c); // WRONG ASSIGNMENT TO MAP VALUE
-        });
-        return map;
+    createClone (target) {
+        // Set clone target
+        const cloneTarget = target;
+            
+        // If clone target is not found, return
+        if (!cloneTarget) return;
+
+        // Create clone
+        return cloneTarget.makeClone();
     }
 
     /**
@@ -418,26 +449,19 @@ class Scratch3Prova {
      */
     defineFood (args, util) {
         this.deleteClones(util.target.id);
-        this.food = [];
-        this.food.push((new Food(util.target.x, util.target.y)));
+        this.food = new Map();
+        this.food.set(util.target.id, util.target);
 
-        // Create maximum 7 clones
-        const foodN = (Math.random() * 7) + 1;
+        const foodN = (Math.random() * (args.FOOD - 1));
         for (let i = 0; i < foodN; i++) {
-            // Set clone target
-            const cloneTarget = util.target;
-            
-            // If clone target is not found, return
-            if (!cloneTarget) return;
-
             // Create clone
-            const newClone = cloneTarget.makeClone();
+            const newClone = this.createClone(util.target);
             if (newClone) {
                 this.runtime.addTarget(newClone);
 
                 // Place behind the original target.
-                newClone.goBehindOther(cloneTarget);
-                
+                newClone.goBehindOther(util.target);
+                    
                 const stageW = this.runtime.constructor.STAGE_WIDTH;
                 const stageH = this.runtime.constructor.STAGE_HEIGHT;
                 // Move in a random position and avoid that anyone is touching the other
@@ -446,7 +470,7 @@ class Scratch3Prova {
                     newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
                     maxIt--;
                 }
-                this.food.push((new Food(newClone.x, newClone.y)));
+                this.food.set(newClone.id, newClone);
             }
         }
     }
@@ -458,25 +482,18 @@ class Scratch3Prova {
      */
     definePoison (args, util) {
         this.deleteClones(util.target.id);
-        this.poison = [];
-        this.poison.push((new Poison(util.target.x, util.target.y)));
+        this.poison = new Map();
+        this.poison.set(util.target.id, util.target);
 
-        // Create maximum 5 clones
-        const poiN = (Math.random() * 5) + 1;
+        const poiN = (Math.random() * (args.POISON - 1));
         for (let i = 0; i < poiN; i++) {
-            // Set clone target
-            const cloneTarget = util.target;
-            
-            // If clone target is not found, return
-            if (!cloneTarget) return;
-
             // Create clone
-            const newClone = cloneTarget.makeClone();
+            const newClone = this.createClone(util.target);
             if (newClone) {
                 this.runtime.addTarget(newClone);
 
                 // Place behind the original target.
-                newClone.goBehindOther(cloneTarget);
+                newClone.goBehindOther(util.target);
                 
                 const stageW = this.runtime.constructor.STAGE_WIDTH;
                 const stageH = this.runtime.constructor.STAGE_HEIGHT;
@@ -486,9 +503,63 @@ class Scratch3Prova {
                     newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
                     maxIt--;
                 }
-                this.poison.push((new Poison(newClone.x, newClone.y)));
+                this.poison.set(newClone.id, newClone);
             }
         }
+    }
+
+    createFood (args, util) {
+        if (this.food.size < 1) {
+            return 'I need a definition';
+        }
+        const fr = parseFloat(args.FREQUENCY) / 100;
+        if (args.FREQUENCY !== 0 && (Math.random() < fr)) {
+            const newClone = this.createClone(util.target);
+            if (newClone) {
+                this.runtime.addTarget(newClone);
+
+                // Place behind the original target.
+                newClone.goBehindOther(util.target);
+                    
+                const stageW = this.runtime.constructor.STAGE_WIDTH;
+                const stageH = this.runtime.constructor.STAGE_HEIGHT;
+                // Move in a random position and avoid that anyone is touching the other
+                let maxIt = 20; // Max 20 try to find a place where is not touch other clones
+                while (newClone.isTouchingSprite(util.target.sprite.name) && maxIt > 0) {
+                    newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
+                    maxIt--;
+                }
+                this.food.set(newClone.id, newClone);
+            }
+        }
+        
+    }
+
+    createPoison (args, util) {
+        if (this.food.size < 1) {
+            return 'I need a definition';
+        }
+        const fr = parseFloat(args.FREQUENCY) / 100;
+        if (args.FREQUENCY !== 0 && (Math.random() < fr)) {
+            const newClone = this.createClone(util.target);
+            if (newClone) {
+                this.runtime.addTarget(newClone);
+
+                // Place behind the original target.
+                newClone.goBehindOther(util.target);
+                    
+                const stageW = this.runtime.constructor.STAGE_WIDTH;
+                const stageH = this.runtime.constructor.STAGE_HEIGHT;
+                // Move in a random position and avoid that anyone is touching the other
+                let maxIt = 20; // Max 20 try to find a place where is not touch other clones
+                while (newClone.isTouchingSprite(util.target.sprite.name) && maxIt > 0) {
+                    newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
+                    maxIt--;
+                }
+                this.poison.set(newClone.id, newClone);
+            }
+        }
+        
     }
 }
 

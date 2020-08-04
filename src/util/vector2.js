@@ -1,4 +1,9 @@
 class Vector2 {
+    /**
+     * Vector2 object
+     * @param {number} x x coordinate
+     * @param {number} y y coordinate
+     */
     constructor (x, y) {
         this.x = x || 0;
         this.y = y || 0;
@@ -172,6 +177,10 @@ class Vector2 {
         // const tmp = this;
         return v.copy().sub(this)
             .mag();
+    }
+    
+    heading () {
+        return Math.atan2(this.y, this.x);
     }
       
 }

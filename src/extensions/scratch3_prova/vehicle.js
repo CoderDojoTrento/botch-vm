@@ -1,10 +1,17 @@
-const vector2 = require('../../util/vector2');
+const Vector2 = require('../../util/vector2');
+const MathUtil = require('../../util/math-util');
 
 class Vehicle {
-    constructor (x, y, mass_, maxForce_, target_) {
-        this.acceleration = new vector2(0, 0);
-        this.velocity = new vector2(0, 2);
-        this.position = new vector2(x, y);
+    /**
+     * Vehicle class
+     * @param {RenderedTarget} target_ target
+     * @param {number} mass_ mass
+     * @param {number} maxForce_ maxForce
+     */
+    constructor (target_, mass_, maxForce_) {
+        this.acceleration = new Vector2(0, 0);
+        this.velocity = new Vector2(0, 2);
+        this.position = new Vector2(target_.x, target_.y);
         this.maxSpeed = 5;
         this.maxForce = maxForce_; // agility ?
         this.target = target_;
@@ -14,6 +21,7 @@ class Vehicle {
     /**
      * Since that the object will be instantiated only once, this function
      * will change the new arguments that will be passed.
+     * UPDATE THE LOCATION IF THE SPRITE IS MANUALLY MOVED
      *
      * If we change manually the position, mass or maxForce of the sprite
      * @param {Number} x_
@@ -22,7 +30,7 @@ class Vehicle {
      * @param {Number} maxForce_
      */
 
-    changeArgs (mass_, maxForce_) {
+    refreshArgs (mass_, maxForce_) {
         this.position.x = parseFloat(this.target.x);
         this.position.y = parseFloat(this.target.y);
         this.mass = parseFloat(mass_);
@@ -45,7 +53,7 @@ class Vehicle {
 
     applyForce (force) {
         // With mass
-        const f = new vector2(force.x, force.y);
+        const f = new Vector2(force.x, force.y);
         f.div(this.mass);
 
         this.acceleration.add(f);
@@ -53,20 +61,30 @@ class Vehicle {
   
     // A method that calculates a steering force towards a target
     // STEER = DESIRED MINUS VELOCITY
-    seek (x_, y_) {
+    seek (x, y) {
 
-        const targetS = new vector2(x_, y_);
+        const targetS = new Vector2(x, y);
 
-        const desired = vector2.sub(targetS, this.position); // A vector pointing from the location to the target
+        const desired = Vector2.sub(targetS,
+            (new Vector2(this.target.x, this.target.y))); // A vector pointing from the location to the target
   
         // Scale to maximum speed
         desired.setMag(this.maxSpeed);
   
         // Steering = Desired minus velocity
-        const steer = vector2.sub(desired, this.velocity);
+        const steer = Vector2.sub(desired, this.velocity);
         steer.limit(this.maxForce); // Limit to maximum steering force
   
         this.applyForce(steer);
+    }
+
+    /**
+     * Point towards the target
+    */
+
+    pointTarget () {
+        const direction = 90 - MathUtil.radToDeg(this.velocity.heading());
+        this.target.setDirection(direction);
     }
 }
 
