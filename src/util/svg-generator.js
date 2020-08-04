@@ -1,4 +1,4 @@
-const vect = require('./vector2');
+const Vector2 = require('./vector2');
 
 class SVGgen {
     /**
@@ -11,6 +11,7 @@ class SVGgen {
         this.width = width;
         this.height = height;
         this.color = color;
+        this.points = [];
     }
 
     /**
@@ -28,36 +29,41 @@ class SVGgen {
 
     /**
      * Generate 3 points in the svg space
-     * @returns {Array} array of points
      */
-    generatePoints () {
-        const p1 = new vect(
-            Math.floor(Math.random() * this.width),
-            Math.floor((Math.random() + 1) * this.height / 2)); // head
+    generateObj1 () {
+        const p1 = new Vector2(
+            Math.floor((Math.random() + 1) * (this.width / 2)),
+            Math.floor(Math.random() * this.height)); // head right-middle
 
-        const p2 = new vect(
-            Math.floor(Math.random() * this.width / 2),
-            Math.floor(Math.random() * p1.y)); // left point
+        const p2 = new Vector2(
+            Math.floor(Math.random() * p1.x),
+            Math.floor(Math.random() * this.height)); // bottom-left
 
-        const p3 = new vect(
-            Math.floor((Math.random() + 1) * this.width / 2),
-            Math.floor(Math.random() * p1.y)); // right point
+        const p3 = new Vector2(
+            Math.floor(Math.random() * p1.x),
+            Math.floor(Math.random() * p2.y)); // up-right
 
-        return [p1, p2, p3];
+        this.points = [p1, p2, p3];
     }
 
-    pointToString () {
-        const points = this.generatePoints();
+    pointToCircle () {
+        return `<circle cx=" ${this.points[0].x}" cy="${this.points[0].y}" ` +
+        `r="4" stroke="black" stroke-width="2" fill="red" />`;
+    }
+
+    pointToTriangle () {
         let str = '';
-        points.forEach(c => {
+        this.points.forEach(c => {
             str += `${c.x},${c.y} `;
         });
         return str;
     }
 
-    generateSVG () {
+    generateSvgObj1 () {
+        this.generateObj1();
         return `<svg height="${this.height}" width="${this.width}" viewBox="0 0 ${this.width} ${this.height}" version="1.1" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">` +
-            `<polygon points="${this.pointToString()}" style="fill:${this.color};stroke:black;stroke-width:4" />` +
+            `<polygon points="${this.pointToTriangle()}" style="fill:${this.color};stroke:black;stroke-width:4" />` +
+            `${this.pointToCircle()}` +
             `</svg>`;
     }
 }
