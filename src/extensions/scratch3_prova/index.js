@@ -382,8 +382,9 @@ class Scratch3Prova {
             util.target, this.mass, this.maxForce);
 
         // change the costume of the original sprite
-        let newSvg = new svgen(130, 130).generateObj3(
-            MathUtil.scale(org.dna[0], -5, 5, 0, 12), MathUtil.scale(org.dna[1], -5, 5, 0, 12));
+        /* let newSvg = new svgen(130, 130).generateObj3(
+            MathUtil.scale(org.dna[0], -5, 5, 0, 12), MathUtil.scale(org.dna[1], -5, 5, 0, 12)); */
+        let newSvg = new svgen(130, 130).generateMultiple(org.dna[0], org.dna[1], 5);
 
         org.svg = newSvg;
 
@@ -409,8 +410,9 @@ class Scratch3Prova {
                     org = new Organism(
                         newClone, this.mass, this.maxForce);
 
-                    newSvg = new svgen(130, 130).generateObj3(
-                        MathUtil.scale(org.dna[0], -5, 5, 0, 12), MathUtil.scale(org.dna[1], -5, 5, 0, 12));
+                    /* newSvg = new svgen(130, 130).generateObj3(
+                        MathUtil.scale(org.dna[0], -5, 5, 0, 12), MathUtil.scale(org.dna[1], -5, 5, 0, 12)); */
+                    newSvg = new svgen(130, 130).generateMultiple(org.dna[0], org.dna[1], 5);
 
                     org.svg = newSvg;
 
