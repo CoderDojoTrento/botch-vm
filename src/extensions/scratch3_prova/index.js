@@ -285,13 +285,18 @@ class Scratch3Prova {
      */
 
     seek (args, util) {
-        // this.refreshClonesMap(util.target.id);
+
+        /*
+        Per ora evito ed elimino i possibili organismi
+        this.refreshOrganismMap(util.target.id);
         // if there is no organism, seek works with common sprites
         if (!this.organismMap.get(util.target.id)) {
             this.seekVehicle(args, util);
         } else {
             this.seekOrganism(args, util);
-        }
+        } */
+        this.organismMap = new Map();
+        this.seekVehicle(args, util);
     }
 
     seekOrganism (args, util) {
@@ -342,22 +347,26 @@ class Scratch3Prova {
      */
     behaviors () {
         if (this.poison.size > 0 && this.food.size > 0) {
-            for (const org of this.organismMap.values()) {
-                org.boundaries(
-                    this.runtime.constructor.STAGE_WIDTH,
-                    this.runtime.constructor.STAGE_HEIGHT);
-                org.refreshArgs(this.mass, this.maxForce);
-                org.behaviors(this.food, this.poison);
-                org.update();
+            if (this.organismMap.size >= 1) {
+                for (const org of this.organismMap.values()) {
+                    org.boundaries(
+                        this.runtime.constructor.STAGE_WIDTH,
+                        this.runtime.constructor.STAGE_HEIGHT);
+                    org.refreshArgs(this.mass, this.maxForce);
+                    org.behaviors(this.food, this.poison);
+                    org.update();
 
-                if (org.dead()) {
-                    console.log('morto'); // TODO vedere come (e se) eliminare lo sprite
+                    if (org.dead()) {
+                        console.log('morto'); // TODO vedere come (e se) eliminare lo sprite
                     /* if (!org.isOriginal) {
                         this.runtime.disposeTarget(org);
                         this.runtime.stopForTarget(org);
                         this.organismMap.delete(org.id);
                     } */
+                    }
                 }
+            } else {
+                return 'There is no organism';
             }
         } else {
             return 'I need food or poison';
@@ -368,10 +377,19 @@ class Scratch3Prova {
         this.deleteClones(util.target.id);
         util.target.goToFront();
         this.organismMap = new Map();
-        this.organismMap.set(util.target.id,
-            new Organism(
-                util.target, this.mass, this.maxForce, 'svg'
-            )); // check if is need to delete this entry somewhere TODO
+
+        let org = new Organism(
+            util.target, this.mass, this.maxForce);
+
+        // change the costume of the original sprite
+        let newSvg = new svgen(130, 130).generateObj3(
+            MathUtil.scale(org.dna[0], -5, 5, 0, 12), MathUtil.scale(org.dna[1], -5, 5, 0, 12));
+
+        org.svg = newSvg;
+
+        this.organismMap.set(util.target.id, org); // check if is need to delete this entry somewhere TODO
+
+        this.uploadCostumeEdit(newSvg, util.target.id);
 
         const copies = Cast.toString(args.COPIES);
         if (copies > 0 && copies <= 30) {
@@ -388,10 +406,15 @@ class Scratch3Prova {
                     // Move back the clone to not overlap
                     newClone.setXY(util.target.x - (20 * i), util.target.y);
 
-                    const newSvg = new svgen(100, 100).generateSvgObj1();
+                    org = new Organism(
+                        newClone, this.mass, this.maxForce);
 
-                    this.organismMap.set(newClone.id, new Organism(
-                        newClone, this.mass, this.maxForce, newSvg));
+                    newSvg = new svgen(130, 130).generateObj3(
+                        MathUtil.scale(org.dna[0], -5, 5, 0, 12), MathUtil.scale(org.dna[1], -5, 5, 0, 12));
+
+                    org.svg = newSvg;
+
+                    this.organismMap.set(newClone.id, org);
 
                     this.uploadCostumeEdit(newSvg, newClone.id);
 
