@@ -345,27 +345,41 @@ class Scratch3Prova {
      * @param {util} util util
      * @returns {string} message
      */
-    behaviors () {
+    behaviors (args, util) {
         if (this.poison.size > 0 && this.food.size > 0) {
-            if (this.organismMap.size >= 1) {
+            if (this.organismMap.size > 1) {
                 for (const org of this.organismMap.values()) {
-                    org.boundaries(
-                        this.runtime.constructor.STAGE_WIDTH,
-                        this.runtime.constructor.STAGE_HEIGHT);
-                    org.refreshArgs(this.mass, this.maxForce);
-                    org.behaviors(this.food, this.poison);
-                    org.update();
+                    if (!org.target.isOriginal) { // Only the clones are managed
+                        org.boundaries(
+                            this.runtime.constructor.STAGE_WIDTH,
+                            this.runtime.constructor.STAGE_HEIGHT);
+                        org.refreshArgs(this.mass, this.maxForce);
+                        org.behaviors(this.food, this.poison);
+                        org.update();
 
-                    if (org.dead()) {
-                        console.log('morto'); // TODO vedere come (e se) eliminare lo sprite
-                    /* if (!org.isOriginal) {
-                        this.runtime.disposeTarget(org);
-                        this.runtime.stopForTarget(org);
-                        this.organismMap.delete(org.id);
-                    } */
+                        const newOrg = org.clone();
+                        if (newOrg !== null) {
+                            const newClone = this.createClone(org.target);
+                            if (newClone) {
+                                this.runtime.addTarget(newClone);
+                                newOrg.target = newClone;
+                            }
+                            this.organismMap.set(newClone.id, newOrg);
+                        }
+
+                        if (org.dead()) {
+                            this.runtime.disposeTarget(org.target);
+                            this.runtime.stopForTarget(org.target);
+                            this.organismMap.delete(org.target.id);
+
+                            // when an organism die, it will drop a food
+                            this.createFoodXY(org.target.x, org.target.y);
+                        }
                     }
                 }
             } else {
+                util.target.setVisible(true);
+                this.runtime.stopAll();
                 return 'There is no organism';
             }
         } else {
@@ -382,15 +396,15 @@ class Scratch3Prova {
             util.target, this.mass, this.maxForce);
 
         // change the costume of the original sprite
-        /* let newSvg = new svgen(130, 130).generateObj3(
-            MathUtil.scale(org.dna[0], -5, 5, 0, 12), MathUtil.scale(org.dna[1], -5, 5, 0, 12)); */
-        let newSvg = new svgen(130, 130).generateMultiple(org.dna[0], org.dna[1], 5);
+        const newSvg = new svgen(130, 130).generateMultiple(org.dna[0], org.dna[1], 5);
 
         org.svg = newSvg;
 
         this.organismMap.set(util.target.id, org); // check if is need to delete this entry somewhere TODO
 
         this.uploadCostumeEdit(newSvg, util.target.id);
+        
+        util.target.setVisible(false); // hide the original
 
         const copies = Cast.toString(args.COPIES);
         if (copies > 0 && copies <= 30) {
@@ -398,30 +412,22 @@ class Scratch3Prova {
                 // Create clone
                 const newClone = this.createClone(util.target);
                 if (newClone) {
+                    newClone.setVisible(true);
                     this.runtime.addTarget(newClone);
 
                     // Place behind the original target.
                     newClone.goBehindOther(util.target);
                     // Set a random size
                     newClone.setSize((Math.random() * 100) + 30);
-                    // Move back the clone to not overlap
-                    newClone.setXY(util.target.x - (20 * i), util.target.y);
+                    
+                    // place the new clone in a random position
+                    const stageW = this.runtime.constructor.STAGE_WIDTH;
+                    const stageH = this.runtime.constructor.STAGE_HEIGHT;
+                    newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
 
-                    org = new Organism(
-                        newClone, this.mass, this.maxForce);
-
-                    /* newSvg = new svgen(130, 130).generateObj3(
-                        MathUtil.scale(org.dna[0], -5, 5, 0, 12), MathUtil.scale(org.dna[1], -5, 5, 0, 12)); */
-                    newSvg = new svgen(130, 130).generateMultiple(org.dna[0], org.dna[1], 5);
-
-                    org.svg = newSvg;
+                    org = new Organism(newClone, this.mass, this.maxForce);
 
                     this.organismMap.set(newClone.id, org);
-
-                    this.uploadCostumeEdit(newSvg, newClone.id);
-
-                    // Add new costume to the new clone
-                    // newClone.setCostume(1);
                 }
             }
         }
@@ -530,6 +536,22 @@ class Scratch3Prova {
                 }
                 this.poison.set(newClone.id, newClone);
             }
+        }
+    }
+
+    /**
+     * Create a food in x, y
+     * @param {number} x x coordinate
+     * @param {number} y y coordinate
+     */
+    createFoodXY (x, y) {
+        const first = this.food.values().next().value;
+        const newClone = this.createClone(first);
+        if (newClone) {
+            newClone.setXY(x, y);
+            this.runtime.addTarget(newClone);
+            newClone.goBehindOther(first);
+            this.food.set(newClone.id, newClone);
         }
     }
 
