@@ -7,6 +7,7 @@ if (typeof TextEncoder === 'undefined') {
 }
 
 /* eslint-disable no-negated-condition */
+
 const ArgumentType = require('../../extension-support/argument-type');
 const BlockType = require('../../extension-support/block-type');
 const Cast = require('../../util/cast');
@@ -16,6 +17,8 @@ const Vehicle = require('./vehicle');
 const Organism = require('./organism');
 const svgen = require('../../util/svg-generator');
 const {loadCostume} = require('../../import/load-costume.js');
+const EvoScratchStorageHelper = require('./evoscratch-storage-helper.js');
+
 
 /*
  * Create the new costume asset for the VM
@@ -45,11 +48,19 @@ class Scratch3Prova {
         this.vehicleMap = new Map();
         this.organismMap = new Map();
         this.inhabitantsMap = new Map();
-        this.storage = runtime.storage;
+        this.storage = runtime.storage;        
         this.food = new Map();
         this.poison = new Map();
         this.maxForce = 0.5;
         this.mass = 1;
+        this.storageHelper = new EvoScratchStorageHelper(runtime.storage);        
+        runtime.storage.addHelper(this.storageHelper);
+        console.log('EvoScratch runtime:', runtime);
+        console.log('EvoScratch custom storageHelper:', this.storageHelper);
+        
+        window.EVOSCRATCH = this;
+        this.testStoreSprite()
+        
     }
 
     // <LOAD COSTUMES METHODS>
@@ -90,6 +101,8 @@ class Scratch3Prova {
         });
         this.handleNewCostume(vmCostumes, id); // Tolto .then(
     }
+
+    
 
     addCostumeFromBuffer (dataBuffer, id) {
         const costumeFormat_ = this.storage.DataFormat.SVG;
@@ -561,6 +574,99 @@ class Scratch3Prova {
         }
         
     }
+ 
+
+    /**  Copied from virtual-machine.js
+     * @since evoscratch-0.1     
+     */
+    _addFileDescsToZip (fileDescs, zip) {
+        for (let i = 0; i < fileDescs.length; i++) {
+            const currFileDesc = fileDescs[i];
+            zip.file(currFileDesc.fileName, currFileDesc.fileContent);
+        }
+    }    
+   /**  Copied from virtual-machine.js
+    * 
+     * Exports a sprite in the sprite3 format.
+     * @param {string} targetId ID of the target to export
+     * @param {string=} optZipType Optional type that the resulting
+     * zip should be outputted in. Options are: base64, binarystring,
+     * array, uint8array, arraybuffer, blob, or nodebuffer. Defaults to
+     * blob if argument not provided.
+     * See https://stuk.github.io/jszip/documentation/api_jszip/generate_async.html#type-option
+     * for more information about these options.
+     * @return {object} A generated zip of the sprite and its assets in the format
+     * specified by optZipType or blob by default.
+     * @since evoscratch-0.1     
+     */
+    exportSprite (targetId, optZipType) {
+        const JSZip = require('jszip');
+        const sb3 = require('../../serialization/sb3');
+        const {serializeSounds, serializeCostumes} = require('../../serialization/serialize-assets');
+        const StringUtil = require('../../util/string-util');
+
+        const soundDescs = serializeSounds(this.runtime, targetId);
+        const costumeDescs = serializeCostumes(this.runtime, targetId);
+        const spriteJson = StringUtil.stringify(sb3.serialize(this.runtime, targetId));
+        
+        const zip = new JSZip();
+        zip.file('sprite.json', spriteJson);
+        this._addFileDescsToZip(soundDescs.concat(costumeDescs), zip);
+
+        return zip.generateAsync({
+            type: typeof optZipType === 'string' ? optZipType : 'blob',
+            mimeType: 'application/x.scratch.sprite3',
+            compression: 'DEFLATE',
+            compressionOptions: {
+                level: 6
+            }
+        });   
+        
+    }
+
+    /** Stores a sprite into custom storageHelper
+     * 
+     * @since evoscratch-0.1     
+     */
+    storeSprite(id){
+        console.log('EvoScratch: trying to store sprite with id',id);
+                        
+        let p = this.exportSprite(id, 'uint8array')
+        return p.then((data) => {
+            this.storageHelper._store(
+                this.storage.AssetType.Sprite,
+                this.storage.DataFormat.SB3,
+                data,
+                id
+            )
+            console.log("EvoScratch: stored sprite with id", id);
+            
+            })        
+    }
+
+    /**
+     * Quick and dirty test, stores first sprite in the custom storageHelper
+     * @since evoscratch-0.1     
+     */
+    testStoreSprite(){
+        console.log('EVOSCRATCH TEST: storing first sprite in custome storageHelper')
+        const id = this.runtime.targets[1].id;
+        
+        this.storeSprite(id).then(() => {
+
+            this.runtime.storage.load('sb3',id).then((storedSprite)=>{
+                console.log('loaded storedSprite', storedSprite)
+                this.storageHelper.load_library_sprite(id).then((spriteAsset)=>{
+                    console.log("Sprite for library (sort of an asset):", spriteAsset);
+                    this.storageHelper.load_library_sprites().then((lib_sprites)=>{
+                        console.log('All sprites for library:', lib_sprites)
+                    });
+                })
+            })
+        });        
+    }
+
+    
 }
 
 module.exports = Scratch3Prova;
