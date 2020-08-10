@@ -1,12 +1,13 @@
+
 const md5 = require('js-md5');
 
-// const log = require('./log');
+//const log = require('./log');
 scratchStorage = require('scratch-storage');
 
 const Asset = scratchStorage.Asset;
 const AssetType = scratchStorage.AssetType;
 const DataFormat = scratchStorage.DataFormat;
-// const Helper = require('scratch-storage/Helper');
+//const Helper = require('scratch-storage/Helper');
 const Helper = require('scratch-storage/src/Helper.js');
 
 
@@ -20,9 +21,9 @@ const Helper = require('scratch-storage/src/Helper.js');
 
 /**
  * @type {BuiltinAssetRecord[]}
- * @since botch-0.1
+ * @since evoscratch-0.1
  */
-const BotchBuiltinAssets = [
+const EvoScratchBuiltinAssets = [
     /** TODO PUT OURS
     {
         type: AssetType.ImageBitmap,
@@ -53,157 +54,157 @@ const BotchBuiltinAssets = [
 
 /**
  * Default sprites, in a format suitable for libraries
- * TODO Substitute Scratch sprites with our own,
+ * TODO Substitute Scratch sprites with our own, 
  * for now I just prepended 'Mutant'
- * @since botch-0.1
+ * @since evoscratch-0.1
  */
 const DEFAULT_LIBRARY_SPRITES = [
     {
-        name: 'Mutant Beetle',
-        md5: '46d0dfd4ae7e9bfe3a6a2e35a4905eae.svg',
-        type: 'sprite',
-        tags: [
-            'animals',
-            'insect',
-            'bug',
-            'antennae',
-            'botch',
-            'mutant'
+        "name": "Mutant Beetle",               
+        "md5": "46d0dfd4ae7e9bfe3a6a2e35a4905eae.svg",
+        "type": "sprite",
+        "tags": [
+            "animals",
+            "insect",
+            "bug",
+            "antennae",
+            "evoscratch",
+            "mutant"
         ],
-        info: [
+        "info": [
             0,
             1,
             1
         ],
-        json: {
-            isStage: false,
-            name: 'Mutant Beetle',
-            variables: {},
-            lists: {},
-            broadcasts: {},
-            blocks: {},
-            comments: {},
-            currentCostume: 0,
-            costumes: [
+        "json": {
+            "isStage": false,
+            "name": "Mutant Beetle",
+            "variables": {},
+            "lists": {},
+            "broadcasts": {},
+            "blocks": {},
+            "comments": {},
+            "currentCostume": 0,
+            "costumes": [
                 {
-                    assetId: '46d0dfd4ae7e9bfe3a6a2e35a4905eae',
-                    name: 'beetle',
-                    bitmapResolution: 1,
-                    md5ext: '46d0dfd4ae7e9bfe3a6a2e35a4905eae.svg',
-                    dataFormat: 'svg',
-                    rotationCenterX: 43,
-                    rotationCenterY: 38
+                    "assetId": "46d0dfd4ae7e9bfe3a6a2e35a4905eae",
+                    "name": "beetle",
+                    "bitmapResolution": 1,
+                    "md5ext": "46d0dfd4ae7e9bfe3a6a2e35a4905eae.svg",
+                    "dataFormat": "svg",
+                    "rotationCenterX": 43,
+                    "rotationCenterY": 38
                 }
             ],
-            sounds: [
+            "sounds": [
                 {
-                    assetId: '83a9787d4cb6f3b7632b4ddfebf74367',
-                    name: 'pop',
-                    dataFormat: 'wav',
-                    format: '',
-                    rate: 44100,
-                    sampleCount: 1032,
-                    md5ext: '83a9787d4cb6f3b7632b4ddfebf74367.wav'
+                    "assetId": "83a9787d4cb6f3b7632b4ddfebf74367",
+                    "name": "pop",
+                    "dataFormat": "wav",
+                    "format": "",
+                    "rate": 44100,
+                    "sampleCount": 1032,
+                    "md5ext": "83a9787d4cb6f3b7632b4ddfebf74367.wav"
                 }
             ],
-            volume: 100,
-            layerOrder: 9,
-            visible: true,
-            x: 77,
-            y: -42,
-            size: 100,
-            direction: 90,
-            draggable: false,
-            rotationStyle: 'all around',
-            objName: 'MutantBeetle'
+            "volume": 100,
+            "layerOrder": 9,
+            "visible": true,
+            "x": 77,
+            "y": -42,
+            "size": 100,
+            "direction": 90,
+            "draggable": false,
+            "rotationStyle": "all around",
+            "objName": "MutantBeetle"
         }
     },
     {
-        name: 'Mutant Ladybug1',
-        md5: '169c0efa8c094fdedddf8c19c36f0229.svg',
-        type: 'sprite',
-        tags: [
-            'animals',
-            'insect',
-            'bug',
-            'antennae'
+        "name": "Mutant Ladybug1",
+        "md5": "169c0efa8c094fdedddf8c19c36f0229.svg",
+        "type": "sprite",
+        "tags": [
+            "animals",
+            "insect",
+            "bug",
+            "antennae"
         ],
-        info: [
+        "info": [
             0,
             1,
             1
         ],
-        json: {
-            isStage: false,
-            name: 'Mutant Ladybug1',
-            variables: {},
-            lists: {},
-            broadcasts: {},
-            blocks: {},
-            comments: {},
-            currentCostume: 0,
-            costumes: [
+        "json": {
+            "isStage": false,
+            "name": "Mutant Ladybug1",
+            "variables": {},
+            "lists": {},
+            "broadcasts": {},
+            "blocks": {},
+            "comments": {},
+            "currentCostume": 0,
+            "costumes": [
                 {
-                    assetId: '169c0efa8c094fdedddf8c19c36f0229',
-                    name: 'ladybug2',
-                    bitmapResolution: 1,
-                    md5ext: '169c0efa8c094fdedddf8c19c36f0229.svg',
-                    dataFormat: 'svg',
-                    rotationCenterX: 41,
-                    rotationCenterY: 43
+                    "assetId": "169c0efa8c094fdedddf8c19c36f0229",
+                    "name": "ladybug2",
+                    "bitmapResolution": 1,
+                    "md5ext": "169c0efa8c094fdedddf8c19c36f0229.svg",
+                    "dataFormat": "svg",
+                    "rotationCenterX": 41,
+                    "rotationCenterY": 43
                 }
             ],
-            sounds: [
+            "sounds": [
                 {
-                    assetId: '83a9787d4cb6f3b7632b4ddfebf74367',
-                    name: 'pop',
-                    dataFormat: 'wav',
-                    format: '',
-                    rate: 44100,
-                    sampleCount: 1032,
-                    md5ext: '83a9787d4cb6f3b7632b4ddfebf74367.wav'
+                    "assetId": "83a9787d4cb6f3b7632b4ddfebf74367",
+                    "name": "pop",
+                    "dataFormat": "wav",
+                    "format": "",
+                    "rate": 44100,
+                    "sampleCount": 1032,
+                    "md5ext": "83a9787d4cb6f3b7632b4ddfebf74367.wav"
                 }
             ],
-            volume: 100,
-            layerOrder: 23,
-            visible: true,
-            x: -90,
-            y: 42,
-            size: 100,
-            direction: 90,
-            draggable: false,
-            rotationStyle: 'all around',
-            objName: 'Mutant Ladybug1'
+            "volume": 100,
+            "layerOrder": 23,
+            "visible": true,
+            "x": -90,
+            "y": 42,
+            "size": 100,
+            "direction": 90,
+            "draggable": false,
+            "rotationStyle": "all around",
+            "objName": "Mutant Ladybug1"
         }
-    }
-];
+    },
+]
 
 
 /**
- * In-memory storage for Botch assets
- *
+ * In-memory storage for EvoScratch assets
+ * 
  * Mostly copied from scratch-storage.js  BuiltinHelper
- * @since botch-0.1
+ * @since evoscratch-0.1
  */
-class BotchStorageHelper extends Helper {
-    constructor (parent) {
+class EvoScratchStorageHelper extends Helper {
+    constructor (parent) {        
         super(parent);
         
         /**
-         * In-memory storage for Botch assets
+         * In-memory storage for EvoScratch assets
          * @type {Object.<AssetType, AssetIdMap>} Maps asset type to a map of asset ID to actual assets.
          * @typedef {Object.<string, BuiltinAssetRecord>} AssetIdMap - Maps asset ID to asset.
          */
         this.assets = {};
 
-        BotchBuiltinAssets.forEach(assetRecord => {
+        EvoScratchBuiltinAssets.forEach(assetRecord => {
             assetRecord.id = this._store(assetRecord.type, assetRecord.format, assetRecord.data, assetRecord.id);
         });
     }
 
     /**
      * Call `setDefaultAssetId` on the parent `ScratchStorage` instance to register all built-in default assets.
-     * @since botch-0.1
+     * @since evoscratch-0.1
      */
     registerDefaultAssets () {
         const numAssets = DefaultAssets.length;
@@ -231,24 +232,24 @@ class BotchStorageHelper extends Helper {
 
     /**
      * Alias for store (old name of store)
-     * @deprecated Use BotchStorageHelper.store
+     * @deprecated Use EvoScratchStorageHelper.store
      * @param {AssetType} assetType - The type of the asset to cache.
      * @param {DataFormat} dataFormat - The dataFormat of the data for the cached asset.
      * @param {Buffer} data - The data for the cached asset.
      * @param {string} id - The id for the cached asset.
      * @returns {string} The calculated id of the cached asset, or the supplied id if the asset is mutable.
-     * @since botch-0.1
+     * @since evoscratch-0.1
      */
     cache (assetType, dataFormat, data, id) {
-        log.warn('Deprecation: BotchStorageHelper.cache has been replaced with BotchStorageHelper.store.');
+        log.warn('Deprecation: EvoScratchStorageHelper.cache has been replaced with EvoScratchStorageHelper.store.');
         return this.store(assetType, dataFormat, data, id);
     }
 
     /**
-     * Botch: we can use this one even if it supposed to be private,
-     * since as of (Aug 2020) using store() from ScratchStorage only stores
+     * EvoScratch: we can use this one even if it supposed to be private, 
+     * since as of (Aug 2020) using store() from ScratchStorage only stores 
      * via default webhelper stores
-     *
+     * 
      * Cache an asset for future lookups by ID.
      * @param {AssetType} assetType - The type of the asset to cache.
      * @param {DataFormat} dataFormat - The dataFormat of the data for the cached asset.
@@ -279,12 +280,12 @@ class BotchStorageHelper extends Helper {
      * @param {AssetType} assetType - The type of asset to fetch.
      * @param {string} assetId - The ID of the asset to fetch: a project ID, MD5, etc.
      * @return {?Promise.<Asset>} A promise for the contents of the asset.
-     * @since botch-0.1
+     * @since evoscratch-0.1
      */
     load (assetType, assetId) {
         if (!this.get(assetId)) {
             // Return null immediately so Storage can quickly move to trying the
-            // next helper.
+            // next helper.            
             return null;
         }
         return Promise.resolve(this.get(assetId));
@@ -292,55 +293,55 @@ class BotchStorageHelper extends Helper {
 
     /**
      * Returns a list with all the tags of the sprites
-     *
-     * @since botch 0.1
-     */
-    get_all_tags (){
-        s = new Set();
+     * 
+     * @since evoscratch 0.1
+     */    
+    get_all_tags(){
+        s = new Set()
         for (const id in this.assets){
-            asset = this.assets[id];
+            asset = this.assets[id]
             if (asset.tags){
                 for (tag of assets.tags){
-                    s.add(tag);
+                    s.add(tag)
                 }
             }
         }
-        for (asset in DEFAULT_LIBRARY_SPRITES){
+        for (asset in DEFAULT_LIBRARY_SPRITES){            
             if (asset.tags){
                 for (tag of assets.tags){
-                    s.add(tag);
+                    s.add(tag)
                 }
             }
         }
 
-        const sorted = Array.from(s);
+        let sorted = Array.from(s);
         sorted.sort();
-        ret = [];
+        ret = []
         for (tag of sorted){
-            ret.push({tag: tag, tag}); // intlLabel: messages.animals})
+            ret.push({tag: tag, tag}); //intlLabel: messages.animals})
         }
         return ret;
     }
     
     /**
-     * Loads a sprite from the store and outputs a Promise containing
+     * Loads a sprite from the store and outputs a Promise containing 
      * the sprite in a format suitable to be viewed in a library panel
-     *
-     * @since botch-0.1
-     * @param id
+     * 
+     * @since evoscratch-0.1
+     * @param id 
      */
-    load_library_sprite (id){
+    load_library_sprite(id){
         
         const JSZip = require('jszip');
 
         const storage = this.parent;
         
-        const storedSprite = this.assets[id];
+        let storedSprite = this.assets[id];
 
-        console.log('storedSprite=', storedSprite);
+        console.log('storedSprite=',storedSprite);
         
-        return JSZip.loadAsync(storedSprite.data).then(zipObj => {
-            const spriteFile = zipObj.file('sprite.json');
+        return JSZip.loadAsync(storedSprite.data).then((zipObj)=>{
+            let spriteFile = zipObj.file('sprite.json');
             if (!spriteFile) {
                 log.error("Couldn't find sprite.json inside stored Sprite !");
                 return Promise.resolve(null);
@@ -351,60 +352,60 @@ class BotchStorageHelper extends Helper {
                 return Promise.resolve(null);
             }
             return spriteFile.async('string').then(data => {
-                console.log('Botch: unzipped data:', data);
+                console.log('EvoScratch: unzipped data:', data)
                 sprite = JSON.parse(data);
                 
                 // in deserialize-assets is written:
                 //    "Zip will not be provided if loading project json from server"
-                // let zip = null;
-                // const sb3 = require('../../serialization/sb3');
-                // deserialize injects lots of runtime stuff we don't need
-                // return sb3.deserialize(obj, this.runtime, zip, true)
-                //    .then(({targets, extensions}) => {
+                //let zip = null;
+                //const sb3 = require('../../serialization/sb3');   
+                // deserialize injects lots of runtime stuff we don't need              
+                //return sb3.deserialize(obj, this.runtime, zip, true)
+                //    .then(({targets, extensions}) => {   
                 //        if (targets.length > 1){
                 //            console.error(targets);
                 //            throw new Error("Found more than one target!!")
                 //        }
-                asset = {};
+                asset = {}
                 asset.type = storage.AssetType.Sprite;
                 // storage.DataFormat.SB3,
                 asset.tags = [
-                    'botch'
-                ];
-                asset.info = [ // TODO What is this ??
+                    "evoscratch",                
+                ]
+                asset.info = [   // TODO What is this ??
                     0,
                     1,
                     1
-                ];
+                ]
                 
 
                 // TODO what about the id? createAsset setss assetId and assetName
-                asset.name = sprite.name;
-                asset.md5 = sprite.costumes && sprite.costumes[0].md5ext;
+                asset.name = sprite.name
+                asset.md5 =  sprite.costumes && sprite.costumes[0].md5ext;
                 asset.json = sprite; // TODO
                 sprite.objName = sprite.name;
-                // this.installTargets(targets, extensions, false)
-                return asset;
+                    //this.installTargets(targets, extensions, false)
+                return asset
                   
-            });
-        });
+            });            
+        });   
         
     }
     
     /**
-     * Loads all sprites from the store and outputs a Promise containing
+     * Loads all sprites from the store and outputs a Promise containing 
      * the sprites in a format suitable to be viewed in a library panel
-     *
-     * @see load_library_sprite
-     * @since botch-0.1
-     */
-    load_library_sprites (){
-        ret = [];
+     * 
+     * @see load_library_sprite     
+     * @since evoscratch-0.1     
+     */    
+    load_library_sprites(){
+        ret = []
         for (const id in this.assets){
-            ret.push(this.load_library_sprite(id));
+            ret.push(this.load_library_sprite(id))
         }
-        return Promise.all(ret).then(lib_sprites => {
-            console.log('lib_sprites=', lib_sprites);
+        return Promise.all(ret).then((lib_sprites)=>{
+            console.log('lib_sprites=',lib_sprites)
             return lib_sprites.concat(DEFAULT_LIBRARY_SPRITES);
         });
                 
@@ -412,4 +413,4 @@ class BotchStorageHelper extends Helper {
 
 }
 
-module.exports = BotchStorageHelper;
+module.exports = EvoScratchStorageHelper;

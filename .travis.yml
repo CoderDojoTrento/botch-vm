@@ -14,7 +14,7 @@ cache:
 before_install:
 # package-lock.json was introduced in npm@5
 - '[[ $(node -v) =~ ^v9.*$ ]] || npm install -g npm@latest' # skipped when using node 9
-#Botch disabling greenkeeper
+#EvoScratch disabling greenkeeper
 #- npm install -g greenkeeper-lockfile
 install:
 - if [[ ${TRAVIS_BRANCH:0:11} = greenkeeper ]]; then npm install --production=false; else npm ci --production=false; fi
@@ -36,7 +36,7 @@ jobs:
       - git config --global user.email "$(git log --pretty=format:"%ae" -n1)"
       - git config --global user.name "$(git log --pretty=format:"%an" -n1)"
       deploy:
-# Botch: disabling deploy to npm for now      
+# EvoScratch: disabling deploy to npm for now      
 #      - provider: npm
 #        on:
 #          all_branches: true
@@ -49,7 +49,7 @@ jobs:
           all_branches: true
           condition: $TRAVIS_EVENT_TYPE != cron
         skip_cleanup: true
-        # Botch seems old, replacing with line found in botch-gui
+        # EvoScratch seems old, replacing with line found in evoscratch-gui
         #script: npm run --silent deploy -- -x -r $GH_PAGES_REPO
         script: npm run deploy -- -x -e $TRAVIS_BRANCH -r https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git
       - provider: script
