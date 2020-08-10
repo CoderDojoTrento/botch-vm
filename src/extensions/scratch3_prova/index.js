@@ -59,7 +59,7 @@ class Scratch3Prova {
         console.log('EvoScratch custom storageHelper:', this.storageHelper);
         
         window.EVOSCRATCH = this;
-        this.testStoreSprite()
+        //this.testStoreSprite()
         
     }
 
