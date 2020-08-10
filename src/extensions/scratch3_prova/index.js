@@ -17,8 +17,7 @@ const Vehicle = require('./vehicle');
 const Organism = require('./organism');
 const svgen = require('../../util/svg-generator');
 const {loadCostume} = require('../../import/load-costume.js');
-const EvoScratchStorageHelper = require('./evoscratch-storage-helper.js');
-
+const BotchStorageHelper = require('./botch-storage-helper.js');
 
 /*
  * Create the new costume asset for the VM
@@ -48,19 +47,18 @@ class Scratch3Prova {
         this.vehicleMap = new Map();
         this.organismMap = new Map();
         this.inhabitantsMap = new Map();
-        this.storage = runtime.storage;        
+        this.storage = runtime.storage;
         this.food = new Map();
         this.poison = new Map();
         this.maxForce = 0.5;
         this.mass = 1;
-        this.storageHelper = new EvoScratchStorageHelper(runtime.storage);        
+        this.storageHelper = new BotchStorageHelper(runtime.storage);
         runtime.storage.addHelper(this.storageHelper);
-        console.log('EvoScratch runtime:', runtime);
-        console.log('EvoScratch custom storageHelper:', this.storageHelper);
-        
+        console.log('Botch runtime:', runtime);
+        console.log('Botch custom storageHelper:', this.storageHelper);
+
         window.EVOSCRATCH = this;
-        this.testStoreSprite()
-        
+        // this.testStoreSprite()
     }
 
     // <LOAD COSTUMES METHODS>
@@ -75,14 +73,18 @@ class Scratch3Prova {
      * @returns {?Promise} - a promise that resolves when the costume has been added
      */
     addCostume (md5ext, costumeObject, optTargetId, optVersion) {
-        const target = optTargetId ? this.runtime.getTargetById(optTargetId) :
+        const target = optTargetId ?
+            this.runtime.getTargetById(optTargetId) :
             this.runtime.getEditingTarget();
         if (target) {
-            return loadCostume(md5ext, costumeObject, this.runtime, optVersion).then(() => {
+            return loadCostume(
+                md5ext,
+                costumeObject,
+                this.runtime,
+                optVersion
+            ).then(() => {
                 target.addCostume(costumeObject);
-                target.setCostume(
-                    target.getCostumes().length - 1
-                );
+                target.setCostume(target.getCostumes().length - 1);
                 this.runtime.emitProjectChanged();
             });
         }
@@ -94,15 +96,13 @@ class Scratch3Prova {
         const costumes = Array.isArray(costume) ? costume : [costume];
         return Promise.all(costumes.map(c => this.addCostume(c.md5, c, id)));
     }
-    
+
     handleCostume (vmCostumes, id) {
         vmCostumes.forEach((costume, i) => {
             costume.name = `${i}${i ? i + 1 : ''}`;
         });
         this.handleNewCostume(vmCostumes, id); // Tolto .then(
     }
-
-    
 
     addCostumeFromBuffer (dataBuffer, id) {
         const costumeFormat_ = this.storage.DataFormat.SVG;
@@ -123,7 +123,10 @@ class Scratch3Prova {
      * @param {string?} id id of the target
      */
     uploadCostumeEdit (fileData, id) {
-        this.addCostumeFromBuffer(new Uint8Array((new _TextEncoder()).encode(fileData)), id);
+        this.addCostumeFromBuffer(
+            new Uint8Array(new _TextEncoder().encode(fileData)),
+            id
+        );
     }
 
     // </LOAD COSTUMES METHODS>
@@ -162,7 +165,8 @@ class Scratch3Prova {
                 {
                     opcode: 'seek',
                     blockType: BlockType.COMMAND,
-                    text: 'seek [TARGET] with mass [MASS] and agility [AGILITY]',
+                    text:
+                        'seek [TARGET] with mass [MASS] and agility [AGILITY]',
                     arguments: {
                         TARGET: {
                             type: ArgumentType.STRING,
@@ -251,7 +255,9 @@ class Scratch3Prova {
     getSpriteMenu () {
         // TODO remove _editingTarget from menu
         if (this.runtime.targets.length > 1) {
-            return this.runtime.targets.filter(t => t.isOriginal && !t.isStage).map(t => t.getName());
+            return this.runtime.targets
+                .filter(t => t.isOriginal && !t.isStage)
+                .map(t => t.getName());
         }
     }
 
@@ -266,7 +272,9 @@ class Scratch3Prova {
 
         const text1 = Cast.toString(args.TEXT_1);
         const text2 = Cast.toString(args.TEXT_2);
-        this.child = text1.slice(0, (text1.length / 2)) + text2.slice(text2.length / 2, text2.length);
+        this.child =
+            text1.slice(0, text1.length / 2) +
+            text2.slice(text2.length / 2, text2.length);
         log.log(this.child);
     }
 
@@ -277,13 +285,12 @@ class Scratch3Prova {
     point (args, util) {
         let targetX = 0;
         let targetY = 0;
-        
+
         args.TARGET = Cast.toString(args.TARGET);
         const pointTarget = this.runtime.getSpriteTargetByName(args.TARGET);
         if (!pointTarget) return;
         targetX = pointTarget.x;
         targetY = pointTarget.y;
-        
 
         const dx = targetX - util.target.x;
         const dy = targetY - util.target.y;
@@ -298,7 +305,6 @@ class Scratch3Prova {
      */
 
     seek (args, util) {
-
         /*
         Per ora evito ed elimino i possibili organismi
         this.refreshOrganismMap(util.target.id);
@@ -314,7 +320,9 @@ class Scratch3Prova {
 
     seekOrganism (args, util) {
         // This line can be more efficient TODO
-        this.organismMap.get(util.target.id).refreshArgs(args.MASS, args.AGILITY);
+        this.organismMap
+            .get(util.target.id)
+            .refreshArgs(args.MASS, args.AGILITY);
 
         // Get the target position
         const pointTarget = this.runtime.getSpriteTargetByName(args.TARGET);
@@ -330,15 +338,19 @@ class Scratch3Prova {
     seekVehicle (args, util) {
         // Check if is already instantiated
         if (!this.vehicleMap.get(util.target.id)) {
-            this.vehicleMap.set(util.target.id, (
+            this.vehicleMap.set(
+                util.target.id,
                 new Vehicle(
-                    util.target, parseFloat(args.MASS),
+                    util.target,
+                    parseFloat(args.MASS),
                     parseFloat(args.AGILITY)
                 )
-            ));
+            );
         } else {
             // This line can be more efficient ?
-            this.vehicleMap.get(util.target.id).refreshArgs(args.MASS, args.AGILITY);
+            this.vehicleMap
+                .get(util.target.id)
+                .refreshArgs(args.MASS, args.AGILITY);
 
             // Get the target position
             const pointTarget = this.runtime.getSpriteTargetByName(args.TARGET);
@@ -362,10 +374,12 @@ class Scratch3Prova {
         if (this.poison.size > 0 && this.food.size > 0) {
             if (this.organismMap.size > 1) {
                 for (const org of this.organismMap.values()) {
-                    if (!org.target.isOriginal) { // Only the clones are managed
+                    if (!org.target.isOriginal) {
+                        // Only the clones are managed
                         org.boundaries(
                             this.runtime.constructor.STAGE_WIDTH,
-                            this.runtime.constructor.STAGE_HEIGHT);
+                            this.runtime.constructor.STAGE_HEIGHT
+                        );
                         org.refreshArgs(this.mass, this.maxForce);
                         org.behaviors(this.food, this.poison);
                         org.update();
@@ -405,18 +419,21 @@ class Scratch3Prova {
         util.target.goToFront();
         this.organismMap = new Map();
 
-        let org = new Organism(
-            util.target, this.mass, this.maxForce);
+        let org = new Organism(util.target, this.mass, this.maxForce);
 
         // change the costume of the original sprite
-        const newSvg = new svgen(130, 130).generateMultiple(org.dna[0], org.dna[1], 5);
+        const newSvg = new svgen(130, 130).generateMultiple(
+            org.dna[0],
+            org.dna[1],
+            5
+        );
 
         org.svg = newSvg;
 
         this.organismMap.set(util.target.id, org); // check if is need to delete this entry somewhere TODO
 
         this.uploadCostumeEdit(newSvg, util.target.id);
-        
+
         util.target.setVisible(false); // hide the original
 
         const copies = Cast.toString(args.COPIES);
@@ -436,7 +453,10 @@ class Scratch3Prova {
                     // place the new clone in a random position
                     const stageW = this.runtime.constructor.STAGE_WIDTH;
                     const stageH = this.runtime.constructor.STAGE_HEIGHT;
-                    newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
+                    newClone.setXY(
+                        (Math.random() - 0.5) * stageW,
+                        (Math.random() - 0.5) * stageH
+                    );
 
                     org = new Organism(newClone, this.mass, this.maxForce);
 
@@ -478,7 +498,7 @@ class Scratch3Prova {
     createClone (target) {
         // Set clone target
         const cloneTarget = target;
-            
+
         // If clone target is not found, return
         if (!cloneTarget) return;
 
@@ -496,7 +516,7 @@ class Scratch3Prova {
         this.food = new Map();
         this.food.set(util.target.id, util.target);
 
-        const foodN = (Math.random() * (args.FOOD - 1));
+        const foodN = Math.random() * (args.FOOD - 1);
         for (let i = 0; i < foodN; i++) {
             // Create clone
             const newClone = this.createClone(util.target);
@@ -505,13 +525,19 @@ class Scratch3Prova {
 
                 // Place behind the original target.
                 newClone.goBehindOther(util.target);
-                    
+
                 const stageW = this.runtime.constructor.STAGE_WIDTH;
                 const stageH = this.runtime.constructor.STAGE_HEIGHT;
                 // Move in a random position and avoid that anyone is touching the other
                 let maxIt = 20; // Max 20 try to find a place where is not touch other clones
-                while (newClone.isTouchingSprite(util.target.sprite.name) && maxIt > 0) {
-                    newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
+                while (
+                    newClone.isTouchingSprite(util.target.sprite.name) &&
+                    maxIt > 0
+                ) {
+                    newClone.setXY(
+                        (Math.random() - 0.5) * stageW,
+                        (Math.random() - 0.5) * stageH
+                    );
                     maxIt--;
                 }
                 this.food.set(newClone.id, newClone);
@@ -529,7 +555,7 @@ class Scratch3Prova {
         this.poison = new Map();
         this.poison.set(util.target.id, util.target);
 
-        const poiN = (Math.random() * (args.POISON - 1));
+        const poiN = Math.random() * (args.POISON - 1);
         for (let i = 0; i < poiN; i++) {
             // Create clone
             const newClone = this.createClone(util.target);
@@ -538,13 +564,19 @@ class Scratch3Prova {
 
                 // Place behind the original target.
                 newClone.goBehindOther(util.target);
-                
+
                 const stageW = this.runtime.constructor.STAGE_WIDTH;
                 const stageH = this.runtime.constructor.STAGE_HEIGHT;
                 // Move in a random position and avoid that anyone is touching the other
                 let maxIt = 20; // Max 20 try to find a place where is not touch other clones
-                while (newClone.isTouchingSprite(util.target.sprite.name) && maxIt > 0) {
-                    newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
+                while (
+                    newClone.isTouchingSprite(util.target.sprite.name) &&
+                    maxIt > 0
+                ) {
+                    newClone.setXY(
+                        (Math.random() - 0.5) * stageW,
+                        (Math.random() - 0.5) * stageH
+                    );
                     maxIt--;
                 }
                 this.poison.set(newClone.id, newClone);
@@ -573,26 +605,31 @@ class Scratch3Prova {
             return 'I need a definition';
         }
         const fr = parseFloat(args.FREQUENCY) / 100;
-        if (args.FREQUENCY !== 0 && (Math.random() < fr)) {
+        if (args.FREQUENCY !== 0 && Math.random() < fr) {
             const newClone = this.createClone(util.target);
             if (newClone) {
                 this.runtime.addTarget(newClone);
 
                 // Place behind the original target.
                 newClone.goBehindOther(util.target);
-                    
+
                 const stageW = this.runtime.constructor.STAGE_WIDTH;
                 const stageH = this.runtime.constructor.STAGE_HEIGHT;
                 // Move in a random position and avoid that anyone is touching the other
                 let maxIt = 20; // Max 20 try to find a place where is not touch other clones
-                while (newClone.isTouchingSprite(util.target.sprite.name) && maxIt > 0) {
-                    newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
+                while (
+                    newClone.isTouchingSprite(util.target.sprite.name) &&
+                    maxIt > 0
+                ) {
+                    newClone.setXY(
+                        (Math.random() - 0.5) * stageW,
+                        (Math.random() - 0.5) * stageH
+                    );
                     maxIt--;
                 }
                 this.food.set(newClone.id, newClone);
             }
         }
-        
     }
 
     createPoison (args, util) {
@@ -600,40 +637,46 @@ class Scratch3Prova {
             return 'I need a definition';
         }
         const fr = parseFloat(args.FREQUENCY) / 100;
-        if (args.FREQUENCY !== 0 && (Math.random() < fr)) {
+        if (args.FREQUENCY !== 0 && Math.random() < fr) {
             const newClone = this.createClone(util.target);
             if (newClone) {
                 this.runtime.addTarget(newClone);
 
                 // Place behind the original target.
                 newClone.goBehindOther(util.target);
-                    
+
                 const stageW = this.runtime.constructor.STAGE_WIDTH;
                 const stageH = this.runtime.constructor.STAGE_HEIGHT;
                 // Move in a random position and avoid that anyone is touching the other
                 let maxIt = 20; // Max 20 try to find a place where is not touch other clones
-                while (newClone.isTouchingSprite(util.target.sprite.name) && maxIt > 0) {
-                    newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
+                while (
+                    newClone.isTouchingSprite(util.target.sprite.name) &&
+                    maxIt > 0
+                ) {
+                    newClone.setXY(
+                        (Math.random() - 0.5) * stageW,
+                        (Math.random() - 0.5) * stageH
+                    );
                     maxIt--;
                 }
                 this.poison.set(newClone.id, newClone);
             }
         }
-        
     }
- 
 
     /**  Copied from virtual-machine.js
-     * @since evoscratch-0.1     
+     * @since botch-0.1
      */
     _addFileDescsToZip (fileDescs, zip) {
         for (let i = 0; i < fileDescs.length; i++) {
             const currFileDesc = fileDescs[i];
             zip.file(currFileDesc.fileName, currFileDesc.fileContent);
         }
-    }    
-   /**  Copied from virtual-machine.js
-    * 
+    }
+    /**  Copied from virtual-machine.js
+     *
+    *
+     *
      * Exports a sprite in the sprite3 format.
      * @param {string} targetId ID of the target to export
      * @param {string=} optZipType Optional type that the resulting
@@ -644,18 +687,23 @@ class Scratch3Prova {
      * for more information about these options.
      * @return {object} A generated zip of the sprite and its assets in the format
      * specified by optZipType or blob by default.
-     * @since evoscratch-0.1     
+     * @since botch-0.1
      */
     exportSprite (targetId, optZipType) {
         const JSZip = require('jszip');
         const sb3 = require('../../serialization/sb3');
-        const {serializeSounds, serializeCostumes} = require('../../serialization/serialize-assets');
+        const {
+            serializeSounds,
+            serializeCostumes
+        } = require('../../serialization/serialize-assets');
         const StringUtil = require('../../util/string-util');
 
         const soundDescs = serializeSounds(this.runtime, targetId);
         const costumeDescs = serializeCostumes(this.runtime, targetId);
-        const spriteJson = StringUtil.stringify(sb3.serialize(this.runtime, targetId));
-        
+        const spriteJson = StringUtil.stringify(
+            sb3.serialize(this.runtime, targetId)
+        );
+
         const zip = new JSZip();
         zip.file('sprite.json', spriteJson);
         this._addFileDescsToZip(soundDescs.concat(costumeDescs), zip);
@@ -667,53 +715,60 @@ class Scratch3Prova {
             compressionOptions: {
                 level: 6
             }
-        });   
-        
+        });
     }
 
     /** Stores a sprite into custom storageHelper
-     * 
-     * @since evoscratch-0.1     
+     *
+     * @since botch-0.1
      */
-    storeSprite(id){
-        console.log('EvoScratch: trying to store sprite with id',id);
-                        
-        let p = this.exportSprite(id, 'uint8array')
-        return p.then((data) => {
+    storeSprite (id) {
+        console.log('Botch: trying to store sprite with id', id);
+
+        const p = this.exportSprite(id, 'uint8array');
+        return p.then(data => {
             this.storageHelper._store(
                 this.storage.AssetType.Sprite,
                 this.storage.DataFormat.SB3,
                 data,
                 id
-            )
-            console.log("EvoScratch: stored sprite with id", id);
-            
-            })        
+            );
+            console.log('Botch: stored sprite with id', id);
+        });
     }
 
     /**
      * Quick and dirty test, stores first sprite in the custom storageHelper
-     * @since evoscratch-0.1     
+     * @since botch-0.1
      */
-    testStoreSprite(){
-        console.log('EVOSCRATCH TEST: storing first sprite in custome storageHelper')
+    testStoreSprite () {
+        console.log(
+            'EVOSCRATCH TEST: storing first sprite in custome storageHelper'
+        );
         const id = this.runtime.targets[1].id;
-        
+
         this.storeSprite(id).then(() => {
-
-            this.runtime.storage.load('sb3',id).then((storedSprite)=>{
-                console.log('loaded storedSprite', storedSprite)
-                this.storageHelper.load_library_sprite(id).then((spriteAsset)=>{
-                    console.log("Sprite for library (sort of an asset):", spriteAsset);
-                    this.storageHelper.load_library_sprites().then((lib_sprites)=>{
-                        console.log('All sprites for library:', lib_sprites)
+            this.runtime.storage.load('sb3', id).then(storedSprite => {
+                console.log('loaded storedSprite', storedSprite);
+                this.storageHelper
+                    .load_library_sprite(id)
+                    .then(spriteAsset => {
+                        console.log(
+                            'Sprite for library (sort of an asset):',
+                            spriteAsset
+                        );
+                        this.storageHelper
+                            .load_library_sprites()
+                            .then(libSprites => {
+                                console.log(
+                                    'All sprites for library:',
+                                    libSprites
+                                );
+                            });
                     });
-                })
-            })
-        });        
+            });
+        });
     }
-
-    
 }
 
 module.exports = Scratch3Prova;
