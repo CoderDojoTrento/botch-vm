@@ -42,6 +42,10 @@ const createVMAsset = function (storage, assetType, dataFormat, data) {
 };
 
 class Scratch3Prova {
+    static get STORAGE_HELPER_UPDATE() {
+        return 'EVOSCRATCH_STORAGE_HELPER_UPDATE';
+    } 
+
     constructor (runtime) {
         this.runtime = runtime;
         this.child = '';
@@ -687,7 +691,7 @@ class Scratch3Prova {
                 id
             )
             console.log("EvoScratch: stored sprite with id", id);
-            
+            this.runtime.emit(Scratch3Prova.STORAGE_HELPER_UPDATE)
             })        
     }
 
