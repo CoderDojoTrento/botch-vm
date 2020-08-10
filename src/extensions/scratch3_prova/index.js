@@ -17,7 +17,7 @@ const Vehicle = require('./vehicle');
 const Organism = require('./organism');
 const svgen = require('../../util/svg-generator');
 const {loadCostume} = require('../../import/load-costume.js');
-const EvoScratchStorageHelper = require('./evoscratch-storage-helper.js');
+const BotchStorageHelper = require('./botch-storage-helper.js');
 
 
 /*
@@ -53,12 +53,12 @@ class Scratch3Prova {
         this.poison = new Map();
         this.maxForce = 0.5;
         this.mass = 1;
-        this.storageHelper = new EvoScratchStorageHelper(runtime.storage);        
+        this.storageHelper = new BotchStorageHelper(runtime.storage);        
         runtime.storage.addHelper(this.storageHelper);
-        console.log('EvoScratch runtime:', runtime);
-        console.log('EvoScratch custom storageHelper:', this.storageHelper);
+        console.log('Botch runtime:', runtime);
+        console.log('Botch custom storageHelper:', this.storageHelper);
         
-        window.EVOSCRATCH = this;
+        window.BOTCH = this;
         this.testStoreSprite()
         
     }
@@ -624,7 +624,7 @@ class Scratch3Prova {
  
 
     /**  Copied from virtual-machine.js
-     * @since evoscratch-0.1     
+     * @since botch-0.1     
      */
     _addFileDescsToZip (fileDescs, zip) {
         for (let i = 0; i < fileDescs.length; i++) {
@@ -644,7 +644,7 @@ class Scratch3Prova {
      * for more information about these options.
      * @return {object} A generated zip of the sprite and its assets in the format
      * specified by optZipType or blob by default.
-     * @since evoscratch-0.1     
+     * @since botch-0.1     
      */
     exportSprite (targetId, optZipType) {
         const JSZip = require('jszip');
@@ -673,10 +673,10 @@ class Scratch3Prova {
 
     /** Stores a sprite into custom storageHelper
      * 
-     * @since evoscratch-0.1     
+     * @since botch-0.1     
      */
     storeSprite(id){
-        console.log('EvoScratch: trying to store sprite with id',id);
+        console.log('Botch: trying to store sprite with id',id);
                         
         let p = this.exportSprite(id, 'uint8array')
         return p.then((data) => {
@@ -686,17 +686,17 @@ class Scratch3Prova {
                 data,
                 id
             )
-            console.log("EvoScratch: stored sprite with id", id);
+            console.log("Botch: stored sprite with id", id);
             
             })        
     }
 
     /**
      * Quick and dirty test, stores first sprite in the custom storageHelper
-     * @since evoscratch-0.1     
+     * @since botch-0.1     
      */
     testStoreSprite(){
-        console.log('EVOSCRATCH TEST: storing first sprite in custome storageHelper')
+        console.log('BOTCH TEST: storing first sprite in custome storageHelper')
         const id = this.runtime.targets[1].id;
         
         this.storeSprite(id).then(() => {

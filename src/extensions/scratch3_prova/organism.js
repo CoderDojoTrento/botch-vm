@@ -56,19 +56,19 @@ class Organism extends Vehicle {
             // Mutation
             this.dna[0] = dna[0];
             if (Math.random() < this.mr) {
-                this.dna[0] += this.rdn(-0.1, 0.1);
+                this.dna[0] += this.rdn(-0.3, 0.3);
             }
             this.dna[1] = dna[1];
             if (Math.random() < this.mr) {
-                this.dna[1] += this.rdn(-0.1, 0.1);
+                this.dna[1] += this.rdn(-0.3, 0.3);
             }
             this.dna[2] = dna[2];
             if (Math.random() < this.mr) {
-                this.dna[2] += this.rdn(-10, 10);
+                this.dna[2] += this.rdn(-15, 15);
             }
             this.dna[3] = dna[3];
             if (Math.random() < this.smr) {
-                this.dna[3] += this.rdn(-10, 10);
+                this.dna[3] += this.rdn(-15, 15);
             }
         } else {
             this.dna[0] = (Math.random() * 10) - 5; // food attraction

@@ -21,9 +21,9 @@ const Helper = require('scratch-storage/src/Helper.js');
 
 /**
  * @type {BuiltinAssetRecord[]}
- * @since evoscratch-0.1
+ * @since botch-0.1
  */
-const EvoScratchBuiltinAssets = [
+const BotchBuiltinAssets = [
     /** TODO PUT OURS
     {
         type: AssetType.ImageBitmap,
@@ -56,7 +56,7 @@ const EvoScratchBuiltinAssets = [
  * Default sprites, in a format suitable for libraries
  * TODO Substitute Scratch sprites with our own, 
  * for now I just prepended 'Mutant'
- * @since evoscratch-0.1
+ * @since botch-0.1
  */
 const DEFAULT_LIBRARY_SPRITES = [
     {
@@ -68,7 +68,7 @@ const DEFAULT_LIBRARY_SPRITES = [
             "insect",
             "bug",
             "antennae",
-            "evoscratch",
+            "botch",
             "mutant"
         ],
         "info": [
@@ -181,30 +181,30 @@ const DEFAULT_LIBRARY_SPRITES = [
 
 
 /**
- * In-memory storage for EvoScratch assets
+ * In-memory storage for Botch assets
  * 
  * Mostly copied from scratch-storage.js  BuiltinHelper
- * @since evoscratch-0.1
+ * @since botch-0.1
  */
-class EvoScratchStorageHelper extends Helper {
+class BotchStorageHelper extends Helper {
     constructor (parent) {        
         super(parent);
         
         /**
-         * In-memory storage for EvoScratch assets
+         * In-memory storage for Botch assets
          * @type {Object.<AssetType, AssetIdMap>} Maps asset type to a map of asset ID to actual assets.
          * @typedef {Object.<string, BuiltinAssetRecord>} AssetIdMap - Maps asset ID to asset.
          */
         this.assets = {};
 
-        EvoScratchBuiltinAssets.forEach(assetRecord => {
+        BotchBuiltinAssets.forEach(assetRecord => {
             assetRecord.id = this._store(assetRecord.type, assetRecord.format, assetRecord.data, assetRecord.id);
         });
     }
 
     /**
      * Call `setDefaultAssetId` on the parent `ScratchStorage` instance to register all built-in default assets.
-     * @since evoscratch-0.1
+     * @since botch-0.1
      */
     registerDefaultAssets () {
         const numAssets = DefaultAssets.length;
@@ -232,21 +232,21 @@ class EvoScratchStorageHelper extends Helper {
 
     /**
      * Alias for store (old name of store)
-     * @deprecated Use EvoScratchStorageHelper.store
+     * @deprecated Use BotchStorageHelper.store
      * @param {AssetType} assetType - The type of the asset to cache.
      * @param {DataFormat} dataFormat - The dataFormat of the data for the cached asset.
      * @param {Buffer} data - The data for the cached asset.
      * @param {string} id - The id for the cached asset.
      * @returns {string} The calculated id of the cached asset, or the supplied id if the asset is mutable.
-     * @since evoscratch-0.1
+     * @since botch-0.1
      */
     cache (assetType, dataFormat, data, id) {
-        log.warn('Deprecation: EvoScratchStorageHelper.cache has been replaced with EvoScratchStorageHelper.store.');
+        log.warn('Deprecation: BotchStorageHelper.cache has been replaced with BotchStorageHelper.store.');
         return this.store(assetType, dataFormat, data, id);
     }
 
     /**
-     * EvoScratch: we can use this one even if it supposed to be private, 
+     * Botch: we can use this one even if it supposed to be private, 
      * since as of (Aug 2020) using store() from ScratchStorage only stores 
      * via default webhelper stores
      * 
@@ -280,7 +280,7 @@ class EvoScratchStorageHelper extends Helper {
      * @param {AssetType} assetType - The type of asset to fetch.
      * @param {string} assetId - The ID of the asset to fetch: a project ID, MD5, etc.
      * @return {?Promise.<Asset>} A promise for the contents of the asset.
-     * @since evoscratch-0.1
+     * @since botch-0.1
      */
     load (assetType, assetId) {
         if (!this.get(assetId)) {
@@ -294,7 +294,7 @@ class EvoScratchStorageHelper extends Helper {
     /**
      * Returns a list with all the tags of the sprites
      * 
-     * @since evoscratch 0.1
+     * @since botch 0.1
      */    
     get_all_tags(){
         s = new Set()
@@ -327,7 +327,7 @@ class EvoScratchStorageHelper extends Helper {
      * Loads a sprite from the store and outputs a Promise containing 
      * the sprite in a format suitable to be viewed in a library panel
      * 
-     * @since evoscratch-0.1
+     * @since botch-0.1
      * @param id 
      */
     load_library_sprite(id){
@@ -352,7 +352,7 @@ class EvoScratchStorageHelper extends Helper {
                 return Promise.resolve(null);
             }
             return spriteFile.async('string').then(data => {
-                console.log('EvoScratch: unzipped data:', data)
+                console.log('Botch: unzipped data:', data)
                 sprite = JSON.parse(data);
                 
                 // in deserialize-assets is written:
@@ -370,7 +370,7 @@ class EvoScratchStorageHelper extends Helper {
                 asset.type = storage.AssetType.Sprite;
                 // storage.DataFormat.SB3,
                 asset.tags = [
-                    "evoscratch",                
+                    "botch",                
                 ]
                 asset.info = [   // TODO What is this ??
                     0,
@@ -397,7 +397,7 @@ class EvoScratchStorageHelper extends Helper {
      * the sprites in a format suitable to be viewed in a library panel
      * 
      * @see load_library_sprite     
-     * @since evoscratch-0.1     
+     * @since botch-0.1     
      */    
     load_library_sprites(){
         ret = []
@@ -413,4 +413,4 @@ class EvoScratchStorageHelper extends Helper {
 
 }
 
-module.exports = EvoScratchStorageHelper;
+module.exports = BotchStorageHelper;
