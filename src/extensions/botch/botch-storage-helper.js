@@ -1,13 +1,12 @@
-
 const md5 = require('js-md5');
 
-//const log = require('./log');
+// const log = require('./log');
 scratchStorage = require('scratch-storage');
 
 const Asset = scratchStorage.Asset;
 const AssetType = scratchStorage.AssetType;
 const DataFormat = scratchStorage.DataFormat;
-//const Helper = require('scratch-storage/Helper');
+// const Helper = require('scratch-storage/Helper');
 const Helper = require('scratch-storage/src/Helper.js');
 
 
@@ -54,142 +53,142 @@ const BotchBuiltinAssets = [
 
 /**
  * Default sprites, in a format suitable for libraries
- * TODO Substitute Scratch sprites with our own, 
+ * TODO Substitute Scratch sprites with our own,
  * for now I just prepended 'Mutant'
  * @since botch-0.1
  */
 const DEFAULT_LIBRARY_SPRITES = [
     {
-        "name": "Mutant Beetle",               
-        "md5": "46d0dfd4ae7e9bfe3a6a2e35a4905eae.svg",
-        "type": "sprite",
-        "tags": [
-            "animals",
-            "insect",
-            "bug",
-            "antennae",
-            "botch",
-            "mutant"
+        name: 'Mutant Beetle',
+        md5: '46d0dfd4ae7e9bfe3a6a2e35a4905eae.svg',
+        type: 'sprite',
+        tags: [
+            'animals',
+            'insect',
+            'bug',
+            'antennae',
+            'botch',
+            'mutant'
         ],
-        "info": [
+        info: [
             0,
             1,
             1
         ],
-        "json": {
-            "isStage": false,
-            "name": "Mutant Beetle",
-            "variables": {},
-            "lists": {},
-            "broadcasts": {},
-            "blocks": {},
-            "comments": {},
-            "currentCostume": 0,
-            "costumes": [
+        json: {
+            isStage: false,
+            name: 'Mutant Beetle',
+            variables: {},
+            lists: {},
+            broadcasts: {},
+            blocks: {},
+            comments: {},
+            currentCostume: 0,
+            costumes: [
                 {
-                    "assetId": "46d0dfd4ae7e9bfe3a6a2e35a4905eae",
-                    "name": "beetle",
-                    "bitmapResolution": 1,
-                    "md5ext": "46d0dfd4ae7e9bfe3a6a2e35a4905eae.svg",
-                    "dataFormat": "svg",
-                    "rotationCenterX": 43,
-                    "rotationCenterY": 38
+                    assetId: '46d0dfd4ae7e9bfe3a6a2e35a4905eae',
+                    name: 'beetle',
+                    bitmapResolution: 1,
+                    md5ext: '46d0dfd4ae7e9bfe3a6a2e35a4905eae.svg',
+                    dataFormat: 'svg',
+                    rotationCenterX: 43,
+                    rotationCenterY: 38
                 }
             ],
-            "sounds": [
+            sounds: [
                 {
-                    "assetId": "83a9787d4cb6f3b7632b4ddfebf74367",
-                    "name": "pop",
-                    "dataFormat": "wav",
-                    "format": "",
-                    "rate": 44100,
-                    "sampleCount": 1032,
-                    "md5ext": "83a9787d4cb6f3b7632b4ddfebf74367.wav"
+                    assetId: '83a9787d4cb6f3b7632b4ddfebf74367',
+                    name: 'pop',
+                    dataFormat: 'wav',
+                    format: '',
+                    rate: 44100,
+                    sampleCount: 1032,
+                    md5ext: '83a9787d4cb6f3b7632b4ddfebf74367.wav'
                 }
             ],
-            "volume": 100,
-            "layerOrder": 9,
-            "visible": true,
-            "x": 77,
-            "y": -42,
-            "size": 100,
-            "direction": 90,
-            "draggable": false,
-            "rotationStyle": "all around",
-            "objName": "MutantBeetle"
+            volume: 100,
+            layerOrder: 9,
+            visible: true,
+            x: 77,
+            y: -42,
+            size: 100,
+            direction: 90,
+            draggable: false,
+            rotationStyle: 'all around',
+            objName: 'MutantBeetle'
         }
     },
     {
-        "name": "Mutant Ladybug1",
-        "md5": "169c0efa8c094fdedddf8c19c36f0229.svg",
-        "type": "sprite",
-        "tags": [
-            "animals",
-            "insect",
-            "bug",
-            "antennae"
+        name: 'Mutant Ladybug1',
+        md5: '169c0efa8c094fdedddf8c19c36f0229.svg',
+        type: 'sprite',
+        tags: [
+            'animals',
+            'insect',
+            'bug',
+            'antennae'
         ],
-        "info": [
+        info: [
             0,
             1,
             1
         ],
-        "json": {
-            "isStage": false,
-            "name": "Mutant Ladybug1",
-            "variables": {},
-            "lists": {},
-            "broadcasts": {},
-            "blocks": {},
-            "comments": {},
-            "currentCostume": 0,
-            "costumes": [
+        json: {
+            isStage: false,
+            name: 'Mutant Ladybug1',
+            variables: {},
+            lists: {},
+            broadcasts: {},
+            blocks: {},
+            comments: {},
+            currentCostume: 0,
+            costumes: [
                 {
-                    "assetId": "169c0efa8c094fdedddf8c19c36f0229",
-                    "name": "ladybug2",
-                    "bitmapResolution": 1,
-                    "md5ext": "169c0efa8c094fdedddf8c19c36f0229.svg",
-                    "dataFormat": "svg",
-                    "rotationCenterX": 41,
-                    "rotationCenterY": 43
+                    assetId: '169c0efa8c094fdedddf8c19c36f0229',
+                    name: 'ladybug2',
+                    bitmapResolution: 1,
+                    md5ext: '169c0efa8c094fdedddf8c19c36f0229.svg',
+                    dataFormat: 'svg',
+                    rotationCenterX: 41,
+                    rotationCenterY: 43
                 }
             ],
-            "sounds": [
+            sounds: [
                 {
-                    "assetId": "83a9787d4cb6f3b7632b4ddfebf74367",
-                    "name": "pop",
-                    "dataFormat": "wav",
-                    "format": "",
-                    "rate": 44100,
-                    "sampleCount": 1032,
-                    "md5ext": "83a9787d4cb6f3b7632b4ddfebf74367.wav"
+                    assetId: '83a9787d4cb6f3b7632b4ddfebf74367',
+                    name: 'pop',
+                    dataFormat: 'wav',
+                    format: '',
+                    rate: 44100,
+                    sampleCount: 1032,
+                    md5ext: '83a9787d4cb6f3b7632b4ddfebf74367.wav'
                 }
             ],
-            "volume": 100,
-            "layerOrder": 23,
-            "visible": true,
-            "x": -90,
-            "y": 42,
-            "size": 100,
-            "direction": 90,
-            "draggable": false,
-            "rotationStyle": "all around",
-            "objName": "Mutant Ladybug1"
+            volume: 100,
+            layerOrder: 23,
+            visible: true,
+            x: -90,
+            y: 42,
+            size: 100,
+            direction: 90,
+            draggable: false,
+            rotationStyle: 'all around',
+            objName: 'Mutant Ladybug1'
         }
-    },
-]
+    }
+];
 
 
 /**
  * In-memory storage for Botch assets
- * 
+ *
  * Mostly copied from scratch-storage.js  BuiltinHelper
  * @since botch-0.1
  */
 class BotchStorageHelper extends Helper {
-    constructor (parent) {        
+    constructor(parent) {
         super(parent);
-        
+
         /**
          * In-memory storage for Botch assets
          * @type {Object.<AssetType, AssetIdMap>} Maps asset type to a map of asset ID to actual assets.
@@ -246,10 +245,10 @@ class BotchStorageHelper extends Helper {
     }
 
     /**
-     * Botch: we can use this one even if it supposed to be private, 
-     * since as of (Aug 2020) using store() from ScratchStorage only stores 
+     * Botch: we can use this one even if it supposed to be private,
+     * since as of (Aug 2020) using store() from ScratchStorage only stores
      * via default webhelper stores
-     * 
+     *
      * Cache an asset for future lookups by ID.
      * @param {AssetType} assetType - The type of the asset to cache.
      * @param {DataFormat} dataFormat - The dataFormat of the data for the cached asset.
@@ -285,7 +284,7 @@ class BotchStorageHelper extends Helper {
     load (assetType, assetId) {
         if (!this.get(assetId)) {
             // Return null immediately so Storage can quickly move to trying the
-            // next helper.            
+            // next helper.
             return null;
         }
         return Promise.resolve(this.get(assetId));
@@ -293,122 +292,122 @@ class BotchStorageHelper extends Helper {
 
     /**
      * Returns a list with all the tags of the sprites
-     * 
+     *
      * @since botch 0.1
-     */    
-    get_all_tags(){
-        s = new Set()
-        for (const id in this.assets){
-            asset = this.assets[id]
-            if (asset.tags){
-                for (tag of assets.tags){
-                    s.add(tag)
+     */
+    get_all_tags () {
+        s = new Set();
+        for (const id in this.assets) {
+            asset = this.assets[id];
+            if (asset.tags) {
+                for (tag of assets.tags) {
+                    s.add(tag);
                 }
             }
         }
-        for (asset in DEFAULT_LIBRARY_SPRITES){            
-            if (asset.tags){
-                for (tag of assets.tags){
-                    s.add(tag)
+        for (asset in DEFAULT_LIBRARY_SPRITES) {
+            if (asset.tags) {
+                for (tag of assets.tags) {
+                    s.add(tag);
                 }
             }
         }
 
-        let sorted = Array.from(s);
+        const sorted = Array.from(s);
         sorted.sort();
-        ret = []
-        for (tag of sorted){
-            ret.push({tag: tag, tag}); //intlLabel: messages.animals})
+        ret = [];
+        for (tag of sorted) {
+            ret.push({ tag: tag, tag }); // intlLabel: messages.animals})
         }
         return ret;
     }
-    
+
     /**
-     * Loads a sprite from the store and outputs a Promise containing 
+     * Loads a sprite from the store and outputs a Promise containing
      * the sprite in a format suitable to be viewed in a library panel
-     * 
+     *
      * @since botch-0.1
-     * @param id 
+     * @param id
      */
-    load_library_sprite(id){
-        
+    load_library_sprite (id) {
+
         const JSZip = require('jszip');
 
         const storage = this.parent;
-        
-        let storedSprite = this.assets[id];
 
-        console.log('storedSprite=',storedSprite);
-        
-        return JSZip.loadAsync(storedSprite.data).then((zipObj)=>{
-            let spriteFile = zipObj.file('sprite.json');
+        const storedSprite = this.assets[id];
+
+        console.log('storedSprite=', storedSprite);
+
+        return JSZip.loadAsync(storedSprite.data).then(zipObj => {
+            const spriteFile = zipObj.file('sprite.json');
             if (!spriteFile) {
                 log.error("Couldn't find sprite.json inside stored Sprite !");
                 return Promise.resolve(null);
-                
+
             }
             if (!JSZip.support.uint8array) {
                 log.error('JSZip uint8array is not supported in this browser.');
                 return Promise.resolve(null);
             }
             return spriteFile.async('string').then(data => {
-                console.log('Botch: unzipped data:', data)
+                console.log('Botch: unzipped data:', data);
                 sprite = JSON.parse(data);
-                
+
                 // in deserialize-assets is written:
                 //    "Zip will not be provided if loading project json from server"
-                //let zip = null;
-                //const sb3 = require('../../serialization/sb3');   
-                // deserialize injects lots of runtime stuff we don't need              
-                //return sb3.deserialize(obj, this.runtime, zip, true)
-                //    .then(({targets, extensions}) => {   
+                // let zip = null;
+                // const sb3 = require('../../serialization/sb3');
+                // deserialize injects lots of runtime stuff we don't need
+                // return sb3.deserialize(obj, this.runtime, zip, true)
+                //    .then(({targets, extensions}) => {
                 //        if (targets.length > 1){
                 //            console.error(targets);
                 //            throw new Error("Found more than one target!!")
                 //        }
-                asset = {}
+                asset = {};
                 asset.type = storage.AssetType.Sprite;
                 // storage.DataFormat.SB3,
                 asset.tags = [
-                    "botch",                
-                ]
-                asset.info = [   // TODO What is this ??
+                    'botch'
+                ];
+                asset.info = [ // TODO What is this ??
                     0,
                     1,
                     1
-                ]
-                
+                ];
+
 
                 // TODO what about the id? createAsset setss assetId and assetName
-                asset.name = sprite.name
-                asset.md5 =  sprite.costumes && sprite.costumes[0].md5ext;
+                asset.name = sprite.name;
+                asset.md5 = sprite.costumes && sprite.costumes[0].md5ext;
                 asset.json = sprite; // TODO
                 sprite.objName = sprite.name;
-                    //this.installTargets(targets, extensions, false)
-                return asset
-                  
-            });            
-        });   
-        
+                // this.installTargets(targets, extensions, false)
+                return asset;
+
+            });
+        });
+
     }
-    
+
     /**
-     * Loads all sprites from the store and outputs a Promise containing 
+     * Loads all sprites from the store and outputs a Promise containing
      * the sprites in a format suitable to be viewed in a library panel
-     * 
-     * @see load_library_sprite     
-     * @since botch-0.1     
-     */    
-    load_library_sprites(){
-        ret = []
-        for (const id in this.assets){
-            ret.push(this.load_library_sprite(id))
+     *
+     * @see load_library_sprite
+     * @since botch-0.1
+     */
+    load_library_sprites () {
+        ret = [];
+        for (const id in this.assets) {
+            ret.push(this.load_library_sprite(id));
         }
-        return Promise.all(ret).then((lib_sprites)=>{
-            console.log('lib_sprites=',lib_sprites)
+        return Promise.all(ret).then(lib_sprites => {
+            console.log('lib_sprites=', lib_sprites);
             return lib_sprites.concat(DEFAULT_LIBRARY_SPRITES);
         });
-                
+
     }
 
 }

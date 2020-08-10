@@ -24,7 +24,7 @@ const builtinExtensions = {
     makeymakey: () => require('../extensions/scratch3_makeymakey'),
     boost: () => require('../extensions/scratch3_boost'),
     gdxfor: () => require('../extensions/scratch3_gdx_for'),
-    botch: () => require('../extensions/scratch3_botch') // Botch
+    botch: () => require('../extensions/botch') // Botch
 };
 
 /**
@@ -60,7 +60,7 @@ const builtinExtensions = {
  */
 
 class ExtensionManager {
-    constructor (runtime) {
+    constructor(runtime) {
         /**
          * The ID number to provide to the next extension worker.
          * @type {int}
@@ -160,7 +160,7 @@ class ExtensionManager {
             // If we `require` this at the global level it breaks non-webpack targets, including tests
             const ExtensionWorker = require('worker-loader?name=extension-worker.js!./extension-worker');
 
-            this.pendingExtensions.push({extensionURL, resolve, reject});
+            this.pendingExtensions.push({ extensionURL, resolve, reject });
             dispatch.addWorker(new ExtensionWorker());
         });
     }
@@ -281,12 +281,12 @@ class ExtensionManager {
             try {
                 let result;
                 switch (blockInfo) {
-                case '---': // separator
-                    result = '---';
-                    break;
-                default: // an ExtensionBlockMetadata object
-                    result = this._prepareBlockInfo(serviceName, blockInfo);
-                    break;
+                    case '---': // separator
+                        result = '---';
+                        break;
+                    default: // an ExtensionBlockMetadata object
+                        result = this._prepareBlockInfo(serviceName, blockInfo);
+                        break;
                 }
                 results.push(result);
             } catch (e) {
@@ -353,15 +353,15 @@ class ExtensionManager {
             item => {
                 item = maybeFormatMessage(item, extensionMessageContext);
                 switch (typeof item) {
-                case 'object':
-                    return [
-                        maybeFormatMessage(item.text, extensionMessageContext),
-                        item.value
-                    ];
-                case 'string':
-                    return [item, item];
-                default:
-                    return item;
+                    case 'object':
+                        return [
+                            maybeFormatMessage(item.text, extensionMessageContext),
+                            item.value
+                        ];
+                    case 'string':
+                        return [item, item];
+                    default:
+                        return item;
                 }
             });
 
@@ -389,49 +389,49 @@ class ExtensionManager {
         blockInfo.text = blockInfo.text || blockInfo.opcode;
 
         switch (blockInfo.blockType) {
-        case BlockType.EVENT:
-            if (blockInfo.func) {
-                log.warn(`Ignoring function "${blockInfo.func}" for event block ${blockInfo.opcode}`);
-            }
-            break;
-        case BlockType.BUTTON:
-            if (blockInfo.opcode) {
-                log.warn(`Ignoring opcode "${blockInfo.opcode}" for button with text: ${blockInfo.text}`);
-            }
-            break;
-        default: {
-            if (!blockInfo.opcode) {
-                throw new Error('Missing opcode for block');
-            }
+            case BlockType.EVENT:
+                if (blockInfo.func) {
+                    log.warn(`Ignoring function "${blockInfo.func}" for event block ${blockInfo.opcode}`);
+                }
+                break;
+            case BlockType.BUTTON:
+                if (blockInfo.opcode) {
+                    log.warn(`Ignoring opcode "${blockInfo.opcode}" for button with text: ${blockInfo.text}`);
+                }
+                break;
+            default: {
+                if (!blockInfo.opcode) {
+                    throw new Error('Missing opcode for block');
+                }
 
-            const funcName = blockInfo.func ? this._sanitizeID(blockInfo.func) : blockInfo.opcode;
+                const funcName = blockInfo.func ? this._sanitizeID(blockInfo.func) : blockInfo.opcode;
 
-            const getBlockInfo = blockInfo.isDynamic ?
-                args => args && args.mutation && args.mutation.blockInfo :
-                () => blockInfo;
-            const callBlockFunc = (() => {
-                if (dispatch._isRemoteService(serviceName)) {
+                const getBlockInfo = blockInfo.isDynamic ?
+                    args => args && args.mutation && args.mutation.blockInfo :
+                    () => blockInfo;
+                const callBlockFunc = (() => {
+                    if (dispatch._isRemoteService(serviceName)) {
+                        return (args, util, realBlockInfo) =>
+                            dispatch.call(serviceName, funcName, args, util, realBlockInfo);
+                    }
+
+                    // avoid promise latency if we can call direct
+                    const serviceObject = dispatch.services[serviceName];
+                    if (!serviceObject[funcName]) {
+                        // The function might show up later as a dynamic property of the service object
+                        log.warn(`Could not find extension block function called ${funcName}`);
+                    }
                     return (args, util, realBlockInfo) =>
-                        dispatch.call(serviceName, funcName, args, util, realBlockInfo);
-                }
+                        serviceObject[funcName](args, util, realBlockInfo);
+                })();
 
-                // avoid promise latency if we can call direct
-                const serviceObject = dispatch.services[serviceName];
-                if (!serviceObject[funcName]) {
-                    // The function might show up later as a dynamic property of the service object
-                    log.warn(`Could not find extension block function called ${funcName}`);
-                }
-                return (args, util, realBlockInfo) =>
-                    serviceObject[funcName](args, util, realBlockInfo);
-            })();
-
-            blockInfo.func = (args, util) => {
-                const realBlockInfo = getBlockInfo(args);
-                // TODO: filter args using the keys of realBlockInfo.arguments? maybe only if sandboxed?
-                return callBlockFunc(args, util, realBlockInfo);
-            };
-            break;
-        }
+                blockInfo.func = (args, util) => {
+                    const realBlockInfo = getBlockInfo(args);
+                    // TODO: filter args using the keys of realBlockInfo.arguments? maybe only if sandboxed?
+                    return callBlockFunc(args, util, realBlockInfo);
+                };
+                break;
+            }
         }
 
         return blockInfo;

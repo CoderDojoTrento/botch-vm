@@ -102,7 +102,6 @@ class Scratch3Botch {
     }
 
 
-
     addCostumeFromBuffer (dataBuffer, id) {
         const costumeFormat_ = this.storage.DataFormat.SVG;
         const assetType_ = this.storage.AssetType.ImageVector;
@@ -135,7 +134,7 @@ class Scratch3Botch {
                 {
                     opcode: 'debugConsole',
                     blockType: BlockType.COMMAND,
-                    text: 'console debug',
+                    text: 'console debug'
                 },
                 {
                     opcode: 'behaviors',
@@ -215,9 +214,9 @@ class Scratch3Botch {
     }
 
     debugConsole (args, util) {
-        console.log('this: ' + this);
-        console.log('args: ' + args);
-        console.log('util: ' + util);
+        console.log(`this: ${this}`);
+        console.log(`args: ${args}`);
+        console.log(`util: ${util}`);
     }
 
     /**
@@ -498,7 +497,7 @@ class Scratch3Botch {
 
 
     /**  Copied from virtual-machine.js
-     * @since botch-0.1     
+     * @since botch-0.1
      */
     _addFileDescsToZip (fileDescs, zip) {
         for (let i = 0; i < fileDescs.length; i++) {
@@ -507,7 +506,7 @@ class Scratch3Botch {
         }
     }
     /**  Copied from virtual-machine.js
-     * 
+     *
       * Exports a sprite in the sprite3 format.
       * @param {string} targetId ID of the target to export
       * @param {string=} optZipType Optional type that the resulting
@@ -518,7 +517,7 @@ class Scratch3Botch {
       * for more information about these options.
       * @return {object} A generated zip of the sprite and its assets in the format
       * specified by optZipType or blob by default.
-      * @since botch-0.1     
+      * @since botch-0.1
       */
     exportSprite (targetId, optZipType) {
         const JSZip = require('jszip');
@@ -546,44 +545,44 @@ class Scratch3Botch {
     }
 
     /** Stores a sprite into custom storageHelper
-     * 
-     * @since botch-0.1     
+     *
+     * @since botch-0.1
      */
     storeSprite (id) {
         console.log('Botch: trying to store sprite with id', id);
 
-        let p = this.exportSprite(id, 'uint8array')
-        return p.then((data) => {
+        const p = this.exportSprite(id, 'uint8array');
+        return p.then(data => {
             this.storageHelper._store(
                 this.storage.AssetType.Sprite,
                 this.storage.DataFormat.SB3,
                 data,
                 id
-            )
-            console.log("Botch: stored sprite with id", id);
+            );
+            console.log('Botch: stored sprite with id', id);
 
-        })
+        });
     }
 
     /**
      * Quick and dirty test, stores first sprite in the custom storageHelper
-     * @since botch-0.1     
+     * @since botch-0.1
      */
     testStoreSprite () {
-        console.log('BOTCH TEST: storing first sprite in custome storageHelper')
+        console.log('BOTCH TEST: storing first sprite in custome storageHelper');
         const id = this.runtime.targets[1].id;
 
         this.storeSprite(id).then(() => {
 
-            this.runtime.storage.load('sb3', id).then((storedSprite) => {
-                console.log('loaded storedSprite', storedSprite)
-                this.storageHelper.load_library_sprite(id).then((spriteAsset) => {
-                    console.log("Sprite for library (sort of an asset):", spriteAsset);
-                    this.storageHelper.load_library_sprites().then((lib_sprites) => {
-                        console.log('All sprites for library:', lib_sprites)
+            this.runtime.storage.load('sb3', id).then(storedSprite => {
+                console.log('loaded storedSprite', storedSprite);
+                this.storageHelper.load_library_sprite(id).then(spriteAsset => {
+                    console.log('Sprite for library (sort of an asset):', spriteAsset);
+                    this.storageHelper.load_library_sprites().then(lib_sprites => {
+                        console.log('All sprites for library:', lib_sprites);
                     });
-                })
-            })
+                });
+            });
         });
     }
 
