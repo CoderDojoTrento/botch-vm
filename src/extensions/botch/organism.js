@@ -9,7 +9,7 @@ if (typeof TextEncoder === 'undefined') {
 const Vector2 = require('../../util/vector2');
 const MathUtil = require('../../util/math-util');
 const svgen = require('../../util/svg-generator');
-const { loadCostume } = require('../../import/load-costume.js');
+const {loadCostume} = require('../../import/load-costume.js');
 
 /*
  * Create the new costume asset for the VM
@@ -41,7 +41,7 @@ class Organism {
      * @param {string} svg_  new svg of the organism
      * @param {Array} dna dna
      */
-    constructor(target_, mass_ = 1, maxForce_ = 0.5, svg_, dna) {
+    constructor (target_, mass_ = 1, maxForce_ = 0.5, svg_, dna) {
         this.acceleration = new Vector2(0, 0);
         this.velocity = new Vector2(0, 2);
         this.position = new Vector2(target_.x, target_.y);
@@ -55,6 +55,7 @@ class Organism {
         this.runtime = this.target.runtime;
         this.storage = this.runtime.storage;
         this.mr = 0.01;
+        this.living = 0; // performance.now();
 
         this.dna = [];
 
@@ -85,6 +86,16 @@ class Organism {
 
         this.svg = new svgen(130, 130).generateMultiple(this.dna[0], this.dna[1], 5);
         this.uploadCostumeEdit(this.svg, this.target.id);
+
+        // Variable assignment to the sprite
+        // each clone has the its own dna saved and the dna of the non-clone target
+        this.target.lookupOrCreateList(this.target.id, `dna_${this.target.id}`);
+        const list = this.target.lookupOrCreateList(
+            this.target.id, `dna_${this.target.id}`);
+        this.dna.forEach(element => {
+            list.value.push(element);
+        });
+        list._monitorUpToDate = false;
     }
 
     // <LOAD COSTUMES METHODS>
@@ -299,6 +310,7 @@ class Organism {
 
     // Method to update location
     update () {
+        this.living += 0.001;
         this.health -= 0.005;
         // Update velocity
         this.velocity.add(this.acceleration);

@@ -15,7 +15,7 @@ const MathUtil = require('../../util/math-util');
 const log = require('../../util/log');
 const Organism = require('./organism');
 const svgen = require('../../util/svg-generator');
-const { loadCostume } = require('../../import/load-costume.js');
+const {loadCostume} = require('../../import/load-costume.js');
 const BotchStorageHelper = require('./botch-storage-helper.js');
 
 
@@ -41,7 +41,7 @@ const createVMAsset = function (storage, assetType, dataFormat, data) {
 };
 
 class Scratch3Botch {
-    constructor(runtime) {
+    constructor (runtime) {
         this.runtime = runtime;
         this.child = '';
         this.vehicleMap = new Map();
@@ -195,6 +195,42 @@ class Scratch3Botch {
                             defaultValue: 2
                         }
                     }
+                },
+                {
+                    opcode: 'sayBest',
+                    blockType: BlockType.COMMAND,
+                    text: 'the best says [TEXT]',
+                    arguments: {
+                        TEXT: {
+                            type: ArgumentType.STRING,
+                            defaultValue: 'Best!'
+                        }
+                    }
+                },
+                {
+                    opcode: 'foodAtt',
+                    blockType: BlockType.REPORTER,
+                    text: 'food att. best:'
+                },
+                {
+                    opcode: 'poisonAtt',
+                    blockType: BlockType.REPORTER,
+                    text: 'poison att. best:'
+                },
+                {
+                    opcode: 'foodDist',
+                    blockType: BlockType.REPORTER,
+                    text: 'food dist. best:'
+                },
+                {
+                    opcode: 'poisonDist',
+                    blockType: BlockType.REPORTER,
+                    text: 'posion dist. best:'
+                },
+                {
+                    opcode: 'health',
+                    blockType: BlockType.REPORTER,
+                    text: 'health best:'
                 }
             ],
             menus: {
@@ -214,9 +250,9 @@ class Scratch3Botch {
     }
 
     debugConsole (args, util) {
-        console.log(`this: ${this}`);
-        console.log(`args: ${args}`);
-        console.log(`util: ${util}`);
+        console.log(this);
+        console.log(args);
+        console.log(util);
     }
 
     /**
@@ -522,7 +558,7 @@ class Scratch3Botch {
     exportSprite (targetId, optZipType) {
         const JSZip = require('jszip');
         const sb3 = require('../../serialization/sb3');
-        const { serializeSounds, serializeCostumes } = require('../../serialization/serialize-assets');
+        const {serializeSounds, serializeCostumes} = require('../../serialization/serialize-assets');
         const StringUtil = require('../../util/string-util');
 
         const soundDescs = serializeSounds(this.runtime, targetId);
@@ -586,6 +622,75 @@ class Scratch3Botch {
         });
     }
 
+    /**
+     * Find the best organism according to its life span
+     * @returns {Organism} best organism
+     * TODO to improve perfomance this can be refreshed less time
+     */
+    findBestOrganism () {
+        let best = null;
+        let max = -1;
+        for (const org of this.organismMap.values()) {
+            if (org.living > max) {
+                best = org;
+                max = org.living;
+            }
+        }
+        return best;
+    }
+
+    foodAtt () {
+        const best = this.findBestOrganism();
+        if (best) {
+            return best.dna[0];
+        }
+        return 'nothing';
+    }
+
+    poisonAtt () {
+        const best = this.findBestOrganism();
+        if (best) {
+            return best.dna[1];
+        }
+        return 'nothing';
+    }
+
+    foodDist () {
+        const best = this.findBestOrganism();
+        if (best) {
+            return best.dna[2];
+        }
+        return 'nothing';
+    }
+
+    poisonDist () {
+        const best = this.findBestOrganism();
+        if (best) {
+            return best.dna[3];
+        }
+        return 'nothing';
+    }
+
+    health () {
+        let best = null;
+        let max = -1;
+        for (const org of this.organismMap.values()) {
+            if (org.living > max) {
+                best = org.health;
+                max = org.living;
+            }
+        }
+        return best;
+    }
+
+    sayBest (args) {
+        let message = args.TEXT;
+        const best = this.findBestOrganism();
+        if (best) {
+            message = String(message).substr(0, 330);
+            this.runtime.emit('SAY', best.target, 'say', message);
+        }
+    }
 
 }
 
