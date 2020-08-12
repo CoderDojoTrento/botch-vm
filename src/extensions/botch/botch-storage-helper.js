@@ -197,7 +197,7 @@ class BotchStorageHelper extends Helper {
         this.assets = {};
 
         BotchBuiltinAssets.forEach(assetRecord => {
-            assetRecord.id = this._store(assetRecord.type, assetRecord.format, assetRecord.data, assetRecord.id);
+            assetRecord.id = this._store(assetRecord.type, assetRecord.format, assetRecord.data, assetRecord.id, assetRecord.name);
         });
     }
 
@@ -254,12 +254,22 @@ class BotchStorageHelper extends Helper {
      * @param {DataFormat} dataFormat - The dataFormat of the data for the cached asset.
      * @param {Buffer} data - The data for the cached asset.
      * @param {(string|number)} id - The id for the cached asset.
+     * @param {string} name - The name for the cached asset (Botch: we added it)
      * @returns {string} The calculated id of the cached asset, or the supplied id if the asset is mutable.
      */
-    _store (assetType, dataFormat, data, id) {
+    _store (assetType, dataFormat, data, id, name) {
+        if (!name){
+            throw new Error(`Missing name:${name}`);
+        }
+        if (!name.trim()){
+            throw new Error('Provided name is all blank !');
+        }
         if (!dataFormat) throw new Error('Data cached without specifying its format');
         if (id !== '' && id !== null && typeof id !== 'undefined') {
-            if (this.assets.hasOwnProperty(id) && assetType.immutable) return id;
+            if (this.assets.hasOwnProperty(id) && assetType.immutable) {
+                console.log('Item already stored !');
+                return id;
+            }
         } else if (assetType.immutable) {
             id = md5(data);
         } else {
@@ -269,7 +279,8 @@ class BotchStorageHelper extends Helper {
             type: assetType,
             format: dataFormat,
             id: id,
-            data: data
+            data: data,
+            name: name
         };
         return id;
     }

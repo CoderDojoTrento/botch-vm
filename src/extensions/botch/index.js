@@ -18,6 +18,7 @@ const svgen = require('../../util/svg-generator');
 const {loadCostume} = require('../../import/load-costume.js');
 const BotchStorageHelper = require('./botch-storage-helper.js');
 
+const md5 = require('js-md5');
 
 /*
  * Create the new costume asset for the VM
@@ -538,6 +539,8 @@ class Scratch3Botch {
 
 
     /**  Copied from virtual-machine.js
+     * @param {object} fileDescs serialized jsons
+     * @param {JSZip} zip zip to add stuff to.
      * @since botch-0.1
      */
     _addFileDescsToZip (fileDescs, zip) {
@@ -550,31 +553,55 @@ class Scratch3Botch {
      *
       * Exports a sprite in the sprite3 format.
       * @param {string} targetId ID of the target to export
-      * @param {string=} optZipType Optional type that the resulting
-      * zip should be outputted in. Options are: base64, binarystring,
+      * @param {string=} optZipType Optional type that the resulting zip should be outputted in. Options are: base64, binarystring,
       * array, uint8array, arraybuffer, blob, or nodebuffer. Defaults to
       * blob if argument not provided.
+      * @param {string=} newName Optional new name
+      *
       * See https://stuk.github.io/jszip/documentation/api_jszip/generate_async.html#type-option
       * for more information about these options.
-      * @return {object} A generated zip of the sprite and its assets in the format
-      * specified by optZipType or blob by default.
+      * @return {Promise} generated zip of the sprite and its assets, plus
+      * a monkey patched md5 field.
+      * NOTE: the md5 is *not* the md5 of the zipped data, because md5 of zips
+      * is not stable: https://github.com/Stuk/jszip/issues/590
       * @since botch-0.1
       */
-    exportSprite (targetId, optZipType) {
+    exportSprite (targetId, optZipType, newName = '') {
+        if (!targetId){
+            throw new Error(`Got empty id:${targetId}!`);
+        }
+        if (newName){
+            if (!newName.trim()){
+                throw new Error('Got an all blank name for sprite !');
+            }
+        }
         const JSZip = require('jszip');
         const sb3 = require('../../serialization/sb3');
         const {serializeSounds, serializeCostumes} = require('../../serialization/serialize-assets');
         const StringUtil = require('../../util/string-util');
 
         const soundDescs = serializeSounds(this.runtime, targetId);
+        console.log('md5(soundDescs)', md5(soundDescs));
         const costumeDescs = serializeCostumes(this.runtime, targetId);
-        const spriteJson = StringUtil.stringify(sb3.serialize(this.runtime, targetId));
+        console.log('md5(costumeDescs)', md5(costumeDescs));
+        const serialized = sb3.serialize(this.runtime, targetId);
+        
+        if (newName){
+            serialized.name = newName;
+        }
+        const spriteJson = StringUtil.stringify(serialized);
+
+        console.log('md5(spriteJson)', md5(spriteJson));
+
+        // Botch: would have been nicer to calculate md5 of the zip
+        // but md5 varies between zips: https://github.com/Stuk/jszip/issues/590
+        const theMd5 = md5(spriteJson + StringUtil.stringify(soundDescs.concat(costumeDescs)));
 
         const zip = new JSZip();
         zip.file('sprite.json', spriteJson);
         this._addFileDescsToZip(soundDescs.concat(costumeDescs), zip);
 
-        return zip.generateAsync({
+        const p = zip.generateAsync({
             type: typeof optZipType === 'string' ? optZipType : 'blob',
             mimeType: 'application/x.scratch.sprite3',
             compression: 'DEFLATE',
@@ -582,30 +609,56 @@ class Scratch3Botch {
                 level: 6
             }
         });
+        p.md5 = theMd5; // monkey patching
+        return p;
 
     }
 
-    /** Stores a sprite into custom storageHelper
+    /** Stores a sprite from runtime into custom storageHelper.
      *
+     *  The sprite is stored with a new id calculated from md5 of the whole sprite
+     *  (json + entire costumes + entire sounds) and provided newName
+     *  If the sprite is a descendent of an existing one, consider reassigning the name.
+     *
+     *  Does *not* change the current runtime.
+     *
+     * @param {string} id  the sprite to store
+     * @param {string} newName  new name for the sprite, if unspecified uses existing one.
+     * @returns {Promise} A promise with an extra md5 field. NOTE: the md5 is *not* the md5 of the zipped data, because zips md5 is not stable: https://github.com/Stuk/jszip/issues/590
      * @since botch-0.1
      */
-    storeSprite (id) {
-        console.log('Botch: trying to store sprite with id', id);
+    storeSprite (id, newName = '') {
+        console.log('Botch: trying to store sprite with original id', id);
 
-        const p = this.exportSprite(id, 'uint8array');
+        if (!id){
+            throw new Error(`Got empty id:${id}!`);
+        }
+        if (newName){
+            if (!newName.trim()){
+                throw new Error('Got all blank name for sprite !');
+            }
+        }
+        
+        const p = this.exportSprite(id, 'uint8array', newName);
+        const newId = p.md5;
+
         return p.then(data => {
+            
+            console.log('Botch: using newId from md5:', newId);
             this.storageHelper._store(
                 this.storage.AssetType.Sprite,
                 this.storage.DataFormat.SB3,
                 data,
-                id
+                newId,
+                newName ? newName : this.runtime.getTargetById(id).sprite.name
             );
-            console.log('Botch: I should emit ', Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
+            console.log('Botch: emitting ', Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
             this.runtime.emit(Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
-            console.log('Botch: stored sprite with id', id);
+            console.log('Botch: stored sprite with newId', newId);
 
         });
     }
+    
 
     /**
      * Quick and dirty test, stores first sprite in the custom storageHelper
