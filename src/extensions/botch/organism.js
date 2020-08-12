@@ -12,8 +12,14 @@ const svgen = require('../../util/svg-generator');
 const {loadCostume} = require('../../import/load-costume.js');
 const Enemy = require('./enemy');
 
-/*
+/**
  * Create the new costume asset for the VM
+ * @param {storage} storage storage
+ * @param {assetType} assetType assetType
+ * @param {dataFormay} dataFormat dataFormat
+ * @param {data} data data
+ * @returns {VMAsset} VMAsset
+ * @since botch-0.1
  */
 const createVMAsset = function (storage, assetType, dataFormat, data) {
     const asset = storage.createAsset(
@@ -33,6 +39,9 @@ const createVMAsset = function (storage, assetType, dataFormat, data) {
     };
 };
 
+/**
+ * @since botch-0.1
+ */
 class Organism {
     /**
      * Class Organism
@@ -44,7 +53,7 @@ class Organism {
      */
     constructor (target_, mass_ = 1, maxForce_ = 0.5, svg_, dna) {
         this.acceleration = new Vector2(0, 0);
-        this.velocity = new Vector2(0, 2);
+        this.velocity = new Vector2(1, 2);
         this.position = new Vector2(target_.x, target_.y);
         this.maxSpeed = 5;
         this.maxForce = maxForce_; // agility ?
@@ -112,6 +121,7 @@ class Organism {
      * @param {string} optTargetId - the id of the target to add to, if not the editing target.
      * @param {string} optVersion - if this is 2, load costume as sb2, otherwise load costume as sb3.
      * @returns {?Promise} - a promise that resolves when the costume has been added
+     * @since botch-0.1
      */
     addCostume (md5ext, costumeObject, optTargetId, optVersion) {
         const target = optTargetId ? this.runtime.getTargetById(optTargetId) :
@@ -158,6 +168,7 @@ class Organism {
      * Assign a new costume (SVG) to the selected target (id)
      * @param {string} fileData string of the svg
      * @param {string?} id id of the target
+     * @since botch-0.1
      */
     uploadCostumeEdit (fileData, id) {
         this.addCostumeFromBuffer(new Uint8Array((new _TextEncoder()).encode(fileData)), id);
@@ -176,12 +187,10 @@ class Organism {
      * UPDATE THE LOCATION IF THE SPRITE IS MANUALLY MOVED
      *
      * If we change manually the position, mass or maxForce of the sprite
-     * @param {Number} x_
-     * @param {Number} y_
-     * @param {Number} mass_
-     * @param {Number} maxForce_
+     * @param {number} mass_ mass
+     * @param {number} maxForce_ maxForce
+     * @since botch-0.1
      */
-
     refreshArgs (mass_, maxForce_) {
         this.position.x = parseFloat(this.target.x);
         this.position.y = parseFloat(this.target.y);
@@ -191,6 +200,7 @@ class Organism {
 
     /**
      * Create a clone of a given target
+     * @since botch-0.1
      */
     createClone () {
         // Set clone target
@@ -206,6 +216,13 @@ class Organism {
         this.target.clearEffect();
     }
 
+    /**
+     * Behave with food and poison
+     * ApplyForce is called here and not in seek
+     * @param {Map} good food map or some sprites that rise the health
+     * @param {Map} bad poison map or some sprites that low the health
+     * @since botch-0.1
+     */
     behaviors (good, bad) {
         const steerG = this.eat(good, 0.2, this.dna[2]);
         const steerB = this.eat(bad, -0.5, this.dna[3]);
@@ -274,9 +291,11 @@ class Organism {
     }
 
     /**
+     * TODO IS CREATING PROBLEMS WHEN USED
      * Check if the sprite touch the object
      * @param {RenderedTarget} obj object to check if touched
      * @returns {boolean} true if is touched
+     * @since botch-0.1
      */
     isTouchingObject (obj) {
         if (!obj || !this.renderer) {
@@ -291,6 +310,7 @@ class Organism {
     /**
      * Create a clone of itself "Parthenogenesis"
      * @returns {Organism} new copy Organism
+     * @since botch-0.1
      */
     clone () {
         if (/* !this.target.isOriginal &&  */Math.random() < 0.002) {
@@ -302,14 +322,21 @@ class Organism {
     /**
      * Check if the organism is dead
      * @returns {boolean} dead or not
+     * @since botch-0.1
      */
     dead () {
         return (this.health < 0);
     }
-
-    // A method that calculates a steering force towards a target
-    // STEER = DESIRED MINUS VELOCITY
-    // REDEFINE the method instead of applyForce it returns the steer
+    
+    /**
+     * A method that calculates a steering force towards a target
+     * STEER = DESIRED MINUS VELOCITY
+     * REDEFINE the method instead of applyForce it returns the steer
+     * @param {number} x x coordinate
+     * @param {number} y y coordinate
+     * @returns {Vector2} steer force
+     * @since botch-0.1
+     */
     seek (x, y) {
         const targetS = new Vector2(x, y);
 
@@ -329,7 +356,10 @@ class Organism {
         // this.applyForce(steer);
     }
 
-    // Method to update location
+    /**
+     * Method to update location
+     * @since botch-0.1
+     */
     update () {
         this.living += 0.001;
         this.health -= 0.005;
@@ -345,6 +375,11 @@ class Organism {
         this.acceleration.mult(0);
     }
 
+    /**
+     * Apply the force to the vehicle
+     * @param {Vector2} force force
+     * @since botch-0.1
+     */
     applyForce (force) {
         // With mass
         const f = new Vector2(force.x, force.y);
@@ -355,14 +390,18 @@ class Organism {
 
     /**
      * Point towards the target
-    */
-
+     * @since botch-0.1
+     */
     pointTarget () {
         const direction = 90 - MathUtil.radToDeg(this.velocity.heading());
         this.target.setDirection(direction);
     }
 
-    // Constrain the vehicles inside the stage
+    /**
+     * Constrain the vehicles inside the stage
+     * @param {number} width with of the space where the organism should stay
+     * @param {number} height height of the space where the organism should stay
+     */
     boundaries (width, height) {
         const d = 5;
 

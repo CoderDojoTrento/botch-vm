@@ -1,6 +1,9 @@
 const Vector2 = require('../../util/vector2');
 const MathUtil = require('../../util/math-util');
 
+/**
+ * @since botch-0.2
+ */
 class Enemy {
     /**
      * Class Enemy
@@ -25,12 +28,9 @@ class Enemy {
      * UPDATE THE LOCATION IF THE SPRITE IS MANUALLY MOVED
      *
      * If we change manually the position, mass or maxForce of the sprite
-     * @param {Number} x_
-     * @param {Number} y_
-     * @param {Number} mass_
-     * @param {Number} maxForce_
+     * @param {number} mass_ mass
+     * @param {number} maxForce_ maxForce
      */
-
     refreshArgs (mass_, maxForce_) {
         this.position.x = parseFloat(this.target.x);
         this.position.y = parseFloat(this.target.y);
@@ -38,15 +38,28 @@ class Enemy {
         this.maxForce = parseFloat(maxForce_);
     }
 
+    /**
+     * Behave with enemies
+     * ApplyForce is called here and not in seek
+     * @param {Map} organism the organism map
+     * @since botch-0.1
+     */
     behaviors (organism) {
         const steerO = this.attack(organism);
         steerO.mult(0.8); // TODO TO DEFINE
         this.applyForce(steerO);
     }
     
-    attack (organism, perc) {
+    /**
+     * Similar to Organism.eat but no sprites are deleted
+     * @param {Map} organism organism
+     * @param {number} perception_ max distance to organism
+     * @returns {Vector2} seek force
+     * @since botch-0.2
+     */
+    attack (organism, perception_) {
         let record = Infinity;
-        const perception = this.perception;
+        const perception = this.perception || perception_;
         let closest = null;
 
         for (const o of organism.values()) {
@@ -66,9 +79,15 @@ class Enemy {
         return new Vector2(0, 0);
     }
 
-    // A method that calculates a steering force towards a target
-    // STEER = DESIRED MINUS VELOCITY
-    // REDEFINE the method instead of applyForce it returns the steer
+    /**
+     * A method that calculates a steering force towards a target
+     * STEER = DESIRED MINUS VELOCITY
+     * REDEFINE the method instead of applyForce it returns the steer
+     * @param {number} x x coordinate
+     * @param {number} y y coordinate
+     * @returns {Vector2} steer force
+     * @since botch-0.1
+     */
     seek (x, y) {
         const targetS = new Vector2(x, y);
 
@@ -88,7 +107,10 @@ class Enemy {
         // this.applyForce(steer);
     }
 
-    // Method to update location
+    /**
+     * Method to update location
+     * @since botch-0.1
+     */
     update () {
         // Update velocity
         this.velocity.add(this.acceleration);
@@ -101,6 +123,11 @@ class Enemy {
         this.acceleration.mult(0);
     }
 
+    /**
+     * Apply the force to the vehicle
+     * @param {Vector2} force force
+     * @since botch-0.1
+     */
     applyForce (force) {
         // With mass
         const f = new Vector2(force.x, force.y);
@@ -111,14 +138,18 @@ class Enemy {
 
     /**
      * Point towards the target
-    */
-
+     * @since botch-0.1
+     */
     pointTarget () {
         const direction = 90 - MathUtil.radToDeg(this.velocity.heading());
         this.target.setDirection(direction);
     }
 
-    // Constrain the vehicles inside the stage
+    /**
+     * Constrain the vehicles inside the stage
+     * @param {number} width with of the space where the organism should stay
+     * @param {number} height height of the space where the organism should stay
+     */
     boundaries (width, height) {
         const d = 5;
 

@@ -17,9 +17,14 @@ const {loadCostume} = require('../../import/load-costume.js');
 const BotchStorageHelper = require('./botch-storage-helper.js');
 const Enemy = require('./enemy');
 
-
-/*
+/**
  * Create the new costume asset for the VM
+ * @param {storage} storage storage
+ * @param {assetType} assetType assetType
+ * @param {dataFormay} dataFormat dataFormat
+ * @param {data} data data
+ * @returns {VMAsset} VMAsset
+ * @since botch-0.1
  */
 const createVMAsset = function (storage, assetType, dataFormat, data) {
     const asset = storage.createAsset(
@@ -72,6 +77,7 @@ class Scratch3Botch {
      * @param {string} optTargetId - the id of the target to add to, if not the editing target.
      * @param {string} optVersion - if this is 2, load costume as sb2, otherwise load costume as sb3.
      * @returns {?Promise} - a promise that resolves when the costume has been added
+     * @since botch-0.1
      */
     addCostume (md5ext, costumeObject, optTargetId, optVersion) {
         const target = optTargetId ? this.runtime.getTargetById(optTargetId) :
@@ -119,6 +125,7 @@ class Scratch3Botch {
      * Assign a new costume (SVG) to the selected target (id)
      * @param {string} fileData string of the svg
      * @param {string?} id id of the target
+     * @since botch-0.1
      */
     uploadCostumeEdit (fileData, id) {
         this.addCostumeFromBuffer(new Uint8Array((new _TextEncoder()).encode(fileData)), id);
@@ -277,6 +284,24 @@ class Scratch3Botch {
     }
 
     /**
+     * Only move the organism randomly
+     * @param {string} message message to say
+     * @since botch-0.2
+     */
+    confusion (message) {
+        for (const org of this.organismMap.values()) {
+            if (!org.target.isOriginal) { // Only the clones are managed
+                org.boundaries(
+                    this.runtime.constructor.STAGE_WIDTH,
+                    this.runtime.constructor.STAGE_HEIGHT);
+                org.refreshArgs(this.mass, this.maxForce);
+                org.update();
+                this.runtime.emit('SAY', org.target, 'say', message);
+            }
+        }
+    }
+
+    /**
      * Function seek,
      * http://www.red3d.com/cwr/steer/gdc99/
      * https://natureofcode.com/book/chapter-6-autonomous-agents/
@@ -287,9 +312,11 @@ class Scratch3Botch {
      * @param {args} args args
      * @param {util} util util
      * @returns {string} message
+     * @since botch-0.1
      */
     behaviors (args, util) {
         if (this.poisonMap.size < 1 && this.foodMap.size < 1) {
+            this.confusion('I need food');
             return 'I need food or poison'; // TODO CONFUSION
         }
 
@@ -330,8 +357,16 @@ class Scratch3Botch {
         }
     }
 
+    /**
+     * Behave with non static sprite (enemies)
+     * @param {args} args args
+     * @param {util} util util
+     * @return {string} message
+     * @since botch-0.2
+     */
     behaveEnemies (args, util) {
-        if (this.enemiesMap.size < 1 && this.foodMap.size < 1) {
+        if (this.poisonMap.size < 1 && this.foodMap.size < 1) {
+            this.confusion('I need food');
             return 'I need food or enemies'; // TODO CONFUSION
         }
 
@@ -372,6 +407,12 @@ class Scratch3Botch {
         }
     }
 
+    /**
+     * Create the population of organism
+     * @param {args} args args
+     * @param {util} util util
+     * @since botch-0.1
+     */
     createPopulation (args, util) {
         this.deleteClones(util.target.id);
         util.target.goToFront();
@@ -421,6 +462,7 @@ class Scratch3Botch {
     /**
      * Delete all the clones of a target
      * @param {string} id id of the target (not a clone)
+     * @since botch-0.1
      */
     deleteClones (id) {
         const clones = this.getClones(id);
@@ -434,6 +476,7 @@ class Scratch3Botch {
      * Get all the clones (only) of the selected target (not a clone)
      * @param {string} id id of the target
      * @returns {clones[]} list of clones
+     * @since botch-0.1
      */
     getClones (id) {
         // Select all the clone of the sprite
@@ -446,6 +489,7 @@ class Scratch3Botch {
      * Create a clone of a given target
      * @param {target} target target
      * @returns {clone} new clone
+     * @since botch-0.1
      */
     createClone (target) {
         // Set clone target
@@ -462,6 +506,7 @@ class Scratch3Botch {
      * Create clones of the selected sprite as "food"
      * @param {*} args args
      * @param {*} util util
+     * @since botch-0.1
      */
     defineFood (args, util) {
         this.deleteClones(util.target.id);
@@ -495,6 +540,7 @@ class Scratch3Botch {
      * Create clones of the selected sprite as "poison"
      * @param {*} args args
      * @param {*} util util
+     * @since botch-0.1
      */
     definePoison (args, util) {
         this.deleteClones(util.target.id);
@@ -528,6 +574,7 @@ class Scratch3Botch {
      * Create a food in x, y
      * @param {number} x x coordinate
      * @param {number} y y coordinate
+     * @since botch-0.1
      */
     createFoodXY (x, y) {
         const first = this.foodMap.values().next().value;
@@ -540,6 +587,13 @@ class Scratch3Botch {
         }
     }
 
+    /**
+     * Create random food in the stage
+     * @param {args} args args
+     * @param {util} util util
+     * @returns {string} message
+     * @since botch-0.1
+     */
     createFood (args, util) {
         if (this.foodMap.size < 1) {
             return 'I need a definition';
@@ -567,6 +621,13 @@ class Scratch3Botch {
 
     }
 
+    /**
+     * Create random poison in the stage
+     * @param {args} args args
+     * @param {util} util util
+     * @returns {string} message
+     * @since botch-0.1
+     */
     createPoison (args, util) {
         if (this.foodMap.size < 1) {
             return 'I need a definition';
@@ -594,8 +655,10 @@ class Scratch3Botch {
 
     }
 
-
-    /**  Copied from virtual-machine.js
+    /**
+     * Copied from virtual-machine.js
+     * @param {fileDesc} fileDescs fileDesc
+     * @param {zip} zip zip
      * @since botch-0.1
      */
     _addFileDescsToZip (fileDescs, zip) {
@@ -644,7 +707,8 @@ class Scratch3Botch {
     }
 
     /** Stores a sprite into custom storageHelper
-     *
+     * @param {id} id id
+     * @returns {any} sprite
      * @since botch-0.1
      */
     storeSprite (id) {
