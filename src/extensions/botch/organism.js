@@ -10,6 +10,7 @@ const Vector2 = require('../../util/vector2');
 const MathUtil = require('../../util/math-util');
 const svgen = require('../../util/svg-generator');
 const {loadCostume} = require('../../import/load-costume.js');
+const Enemy = require('./enemy');
 
 /*
  * Create the new costume asset for the VM
@@ -223,21 +224,33 @@ class Organism {
         let closest = null;
         const stageW = this.target.runtime.constructor.STAGE_WIDTH;
         const stageH = this.target.runtime.constructor.STAGE_HEIGHT;
+        let esc = 30;
 
-        for (const f of list.values()) {
+        for (let f of list.values()) {
+            let en = false;
+            if (f instanceof Enemy) {
+                f = f.target;
+                en = true;
+                esc = 10;
+            }
+            
             const d = new Vector2(f.x, f.y).dist(new Vector2(this.target.x, this.target.y));
 
             // If is close to food (eat) change the position if is original
             // otherwise delete the clone
             // Easier
-            if (d < 30) { // (this.isTouchingObject(f)) { // there is no isTouchingSprite() with a specific ID
-                this.health += nutrition;
-                if (f.isOriginal) {
-                    f.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
+            if (d < esc) { // (this.isTouchingObject(f)) { // there is no isTouchingSprite() with a specific ID
+                if (en) {
+                    this.health -= 0.1;
                 } else {
-                    this.target.runtime.disposeTarget(f);
-                    this.target.runtime.stopForTarget(f);
-                    list.delete(f.id);
+                    this.health += nutrition;
+                    if (f.isOriginal) {
+                        f.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
+                    } else {
+                        this.target.runtime.disposeTarget(f);
+                        this.target.runtime.stopForTarget(f);
+                        list.delete(f.id);
+                    }
                 }
             } else if (d < record && d < perception) {
                 record = d;

@@ -11,12 +11,11 @@ if (typeof TextEncoder === 'undefined') {
 const ArgumentType = require('../../extension-support/argument-type');
 const BlockType = require('../../extension-support/block-type');
 const Cast = require('../../util/cast');
-const MathUtil = require('../../util/math-util');
-const log = require('../../util/log');
 const Organism = require('./organism');
 const svgen = require('../../util/svg-generator');
 const {loadCostume} = require('../../import/load-costume.js');
 const BotchStorageHelper = require('./botch-storage-helper.js');
+const Enemy = require('./enemy');
 
 
 /*
@@ -46,11 +45,12 @@ class Scratch3Botch {
         this.child = '';
         this.vehicleMap = new Map();
         this.organismMap = new Map();
-        this.inhabitantsMap = new Map();
+        this.enemiesMap = new Map();
         this.storage = runtime.storage;
-        this.food = new Map();
-        this.poison = new Map();
+        this.foodMap = new Map();
+        this.poisonMap = new Map();
         this.maxForce = 0.5;
+        this.enemiesMaxForce = 0.3;
         this.mass = 1;
         this.storageHelper = new BotchStorageHelper(runtime.storage);
         runtime.storage.addHelper(this.storageHelper);
@@ -139,7 +139,12 @@ class Scratch3Botch {
                 {
                     opcode: 'behaviors',
                     blockType: BlockType.COMMAND,
-                    text: 'behave'
+                    text: 'behave with poison'
+                },
+                {
+                    opcode: 'behaveEnemies',
+                    blockType: BlockType.COMMAND,
+                    text: 'behave with enemies'
                 },
                 {
                     opcode: 'createPopulation',
@@ -195,6 +200,22 @@ class Scratch3Botch {
                             defaultValue: 2
                         }
                     }
+                },
+                {
+                    opcode: 'defineEnemies',
+                    blockType: BlockType.COMMAND,
+                    text: 'generate: [ENEMIES] enemies',
+                    arguments: {
+                        ENEMIES: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: 1
+                        }
+                    }
+                },
+                {
+                    opcode: 'moveEnemies',
+                    blockType: BlockType.COMMAND,
+                    text: 'move enemies'
                 },
                 {
                     opcode: 'sayBest',
@@ -268,44 +289,86 @@ class Scratch3Botch {
      * @returns {string} message
      */
     behaviors (args, util) {
-        if (this.poison.size > 0 && this.food.size > 0) {
-            if (this.organismMap.size > 1) {
-                for (const org of this.organismMap.values()) {
-                    if (!org.target.isOriginal) { // Only the clones are managed
-                        org.boundaries(
-                            this.runtime.constructor.STAGE_WIDTH,
-                            this.runtime.constructor.STAGE_HEIGHT);
-                        org.refreshArgs(this.mass, this.maxForce);
-                        org.behaviors(this.food, this.poison);
-                        org.update();
+        if (this.poisonMap.size < 1 && this.foodMap.size < 1) {
+            return 'I need food or poison'; // TODO CONFUSION
+        }
 
-                        const newOrg = org.clone();
-                        if (newOrg !== null) {
-                            const newClone = this.createClone(org.target);
-                            if (newClone) {
-                                this.runtime.addTarget(newClone);
-                                newOrg.target = newClone;
-                            }
-                            this.organismMap.set(newClone.id, newOrg);
-                        }
+        if (this.organismMap.size <= 1) {
+            util.target.setVisible(true);
+            this.runtime.stopAll();
+            return 'There is no organism';
+        }
 
-                        if (org.dead()) {
-                            this.runtime.disposeTarget(org.target);
-                            this.runtime.stopForTarget(org.target);
-                            this.organismMap.delete(org.target.id);
+        for (const org of this.organismMap.values()) {
+            if (!org.target.isOriginal) { // Only the clones are managed
+                org.boundaries(
+                    this.runtime.constructor.STAGE_WIDTH,
+                    this.runtime.constructor.STAGE_HEIGHT);
+                org.refreshArgs(this.mass, this.maxForce);
+                org.behaviors(this.foodMap, this.poisonMap);
+                org.update();
 
-                            // when an organism die, it will drop a food
-                            this.createFoodXY(org.target.x, org.target.y);
-                        }
+                const newOrg = org.clone();
+                if (newOrg !== null) {
+                    const newClone = this.createClone(org.target);
+                    if (newClone) {
+                        this.runtime.addTarget(newClone);
+                        newOrg.target = newClone;
                     }
+                    this.organismMap.set(newClone.id, newOrg);
                 }
-            } else {
-                util.target.setVisible(true);
-                this.runtime.stopAll();
-                return 'There is no organism';
+
+                if (org.dead()) {
+                    this.runtime.disposeTarget(org.target);
+                    this.runtime.stopForTarget(org.target);
+                    this.organismMap.delete(org.target.id);
+
+                    // when an organism die, it will drop a food
+                    this.createFoodXY(org.target.x, org.target.y);
+                }
             }
-        } else {
-            return 'I need food or poison';
+        }
+    }
+
+    behaveEnemies (args, util) {
+        if (this.enemiesMap.size < 1 && this.foodMap.size < 1) {
+            return 'I need food or enemies'; // TODO CONFUSION
+        }
+
+        if (this.organismMap.size <= 1) {
+            util.target.setVisible(true);
+            this.runtime.stopAll();
+            return 'There is no organism';
+        }
+
+        for (const org of this.organismMap.values()) {
+            if (!org.target.isOriginal) { // Only the clones are managed
+                org.boundaries(
+                    this.runtime.constructor.STAGE_WIDTH,
+                    this.runtime.constructor.STAGE_HEIGHT);
+                org.refreshArgs(this.mass, this.maxForce);
+                org.behaviors(this.foodMap, this.enemiesMap);
+                org.update();
+
+                const newOrg = org.clone();
+                if (newOrg !== null) {
+                    const newClone = this.createClone(org.target);
+                    if (newClone) {
+                        this.runtime.addTarget(newClone);
+                        newOrg.target = newClone;
+                    }
+                    this.organismMap.set(newClone.id, newOrg);
+                }
+
+                if (org.dead()) {
+                    this.runtime.disposeTarget(org.target);
+                    this.runtime.stopForTarget(org.target);
+                    this.organismMap.delete(org.target.id);
+
+                    // when an organism die, it will drop a food
+                    this.createFoodXY(org.target.x, org.target.y);
+                }
+            }
         }
     }
 
@@ -402,8 +465,8 @@ class Scratch3Botch {
      */
     defineFood (args, util) {
         this.deleteClones(util.target.id);
-        this.food = new Map();
-        this.food.set(util.target.id, util.target);
+        this.foodMap = new Map();
+        this.foodMap.set(util.target.id, util.target);
 
         const foodN = (Math.random() * (args.FOOD - 1));
         for (let i = 0; i < foodN; i++) {
@@ -423,7 +486,7 @@ class Scratch3Botch {
                     newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
                     maxIt--;
                 }
-                this.food.set(newClone.id, newClone);
+                this.foodMap.set(newClone.id, newClone);
             }
         }
     }
@@ -435,8 +498,8 @@ class Scratch3Botch {
      */
     definePoison (args, util) {
         this.deleteClones(util.target.id);
-        this.poison = new Map();
-        this.poison.set(util.target.id, util.target);
+        this.poisonMap = new Map();
+        this.poisonMap.set(util.target.id, util.target);
 
         const poiN = (Math.random() * (args.POISON - 1));
         for (let i = 0; i < poiN; i++) {
@@ -456,7 +519,7 @@ class Scratch3Botch {
                     newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
                     maxIt--;
                 }
-                this.poison.set(newClone.id, newClone);
+                this.poisonMap.set(newClone.id, newClone);
             }
         }
     }
@@ -467,18 +530,18 @@ class Scratch3Botch {
      * @param {number} y y coordinate
      */
     createFoodXY (x, y) {
-        const first = this.food.values().next().value;
+        const first = this.foodMap.values().next().value;
         const newClone = this.createClone(first);
         if (newClone) {
             newClone.setXY(x, y);
             this.runtime.addTarget(newClone);
             newClone.goBehindOther(first);
-            this.food.set(newClone.id, newClone);
+            this.foodMap.set(newClone.id, newClone);
         }
     }
 
     createFood (args, util) {
-        if (this.food.size < 1) {
+        if (this.foodMap.size < 1) {
             return 'I need a definition';
         }
         const fr = parseFloat(args.FREQUENCY) / 100;
@@ -498,14 +561,14 @@ class Scratch3Botch {
                     newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
                     maxIt--;
                 }
-                this.food.set(newClone.id, newClone);
+                this.foodMap.set(newClone.id, newClone);
             }
         }
 
     }
 
     createPoison (args, util) {
-        if (this.food.size < 1) {
+        if (this.foodMap.size < 1) {
             return 'I need a definition';
         }
         const fr = parseFloat(args.FREQUENCY) / 100;
@@ -525,7 +588,7 @@ class Scratch3Botch {
                     newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
                     maxIt--;
                 }
-                this.poison.set(newClone.id, newClone);
+                this.poisonMap.set(newClone.id, newClone);
             }
         }
 
@@ -605,7 +668,7 @@ class Scratch3Botch {
      * @since botch-0.1
      */
     testStoreSprite () {
-        console.log('BOTCH TEST: storing first sprite in custome storageHelper');
+        console.log('BOTCH TEST: storing first sprite in custom storageHelper');
         const id = this.runtime.targets[1].id;
 
         this.storeSprite(id).then(() => {
@@ -622,10 +685,59 @@ class Scratch3Botch {
         });
     }
 
+    defineEnemies (args, util) {
+        this.deleteClones(util.target.id);
+        util.target.goToFront();
+        this.enemiesMap = new Map();
+
+        let enemy = new Enemy(
+            util.target, this.mass, this.enemiesMaxForce);
+
+        this.enemiesMap.set(util.target.id, enemy);
+
+        const copies = Cast.toString(args.ENEMIES);
+        if (copies > 0 && copies <= 30) {
+            for (let i = 0; i < copies; i++) {
+                // Create clone
+                const newClone = this.createClone(util.target);
+                if (newClone) {
+                    this.runtime.addTarget(newClone);
+
+                    // Place behind the original target.
+                    newClone.goBehindOther(util.target);
+
+                    // place the new clone in a random position
+                    const stageW = this.runtime.constructor.STAGE_WIDTH;
+                    const stageH = this.runtime.constructor.STAGE_HEIGHT;
+                    newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
+
+                    enemy = new Enemy(newClone, this.mass, this.enemiesMaxForce);
+
+                    this.enemiesMap.set(newClone.id, enemy);
+                }
+            }
+        }
+    }
+
+    moveEnemies () {
+        if (this.organismMap.size < 1) {
+            return 'There is no organism';
+        }
+
+        for (const enemy of this.enemiesMap.values()) {
+            enemy.boundaries(
+                this.runtime.constructor.STAGE_WIDTH - 150,
+                this.runtime.constructor.STAGE_HEIGHT - 150);
+            enemy.refreshArgs(this.mass, this.enemiesMaxForce);
+            enemy.behaviors(this.organismMap);
+            enemy.update();
+        }
+    }
+
     /**
      * Find the best organism according to its life span
      * @returns {Organism} best organism
-     * TODO to improve perfomance this can be refreshed less time
+     * TODO to improve performance this can be refreshed less time
      */
     findBestOrganism () {
         let best = null;
