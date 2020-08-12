@@ -152,6 +152,11 @@ class VirtualMachine extends EventEmitter {
             this.emit(Runtime.HAS_CLOUD_DATA_UPDATE, hasCloudData);
         });
 
+        // Botch
+        this.runtime.on('BOTCH_STORAGE_HELPER_UPDATE', () => {
+            this.emit('BOTCH_STORAGE_HELPER_UPDATE');
+        });
+
         this.extensionManager = new ExtensionManager(this.runtime);
 
         // Load core extensions

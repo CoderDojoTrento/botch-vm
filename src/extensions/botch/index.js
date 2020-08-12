@@ -41,6 +41,11 @@ const createVMAsset = function (storage, assetType, dataFormat, data) {
 };
 
 class Scratch3Botch {
+
+    static get BOTCH_STORAGE_HELPER_UPDATE (){
+        return 'BOTCH_STORAGE_HELPER_UPDATE';
+    }
+
     constructor (runtime) {
         this.runtime = runtime;
         this.child = '';
@@ -595,6 +600,8 @@ class Scratch3Botch {
                 data,
                 id
             );
+            console.log('Botch: I should emit ', Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
+            this.runtime.emit(Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
             console.log('Botch: stored sprite with id', id);
 
         });
@@ -612,10 +619,10 @@ class Scratch3Botch {
 
             this.runtime.storage.load('sb3', id).then(storedSprite => {
                 console.log('loaded storedSprite', storedSprite);
-                this.storageHelper.load_library_sprite(id).then(spriteAsset => {
+                this.storageHelper.loadLibrarySprite(id).then(spriteAsset => {
                     console.log('Sprite for library (sort of an asset):', spriteAsset);
-                    this.storageHelper.load_library_sprites().then(lib_sprites => {
-                        console.log('All sprites for library:', lib_sprites);
+                    this.storageHelper.loadLibrarySprites().then(libSprites => {
+                        console.log('All sprites for library:', libSprites);
                     });
                 });
             });
