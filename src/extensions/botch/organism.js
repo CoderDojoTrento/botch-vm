@@ -57,6 +57,9 @@ class Organism {
         this.storage = this.runtime.storage;
         this.mr = 0.01;
         this.living = 0; // performance.now();
+        this.effectStep = 7;
+        this.currEffectStep = this.effectStep;
+        this.effectSign = 1;
 
         this.dna = [];
 
@@ -198,6 +201,9 @@ class Organism {
 
         // Create clone
         this.target = cloneTarget.makeClone();
+        
+        // Reset the target effect
+        this.target.clearEffect();
     }
 
     behaviors (good, bad) {
@@ -214,10 +220,12 @@ class Organism {
     /**
      * Eat the list passed and set the health of the organism
      * according to the nutrition
+     * If the list passed is an enemy it will be treated differently
      * @param {Map} list food or poison
      * @param {number} nutrition value for health
      * @param {number} perception distance to see object
      * @returns {Vector2} steer force
+     * @since botch-0.2
      */
     eat (list, nutrition, perception) {
         let record = Infinity;
@@ -233,7 +241,7 @@ class Organism {
                 en = true;
                 esc = 10;
             }
-            
+
             const d = new Vector2(f.x, f.y).dist(new Vector2(this.target.x, this.target.y));
 
             // If is close to food (eat) change the position if is original
@@ -325,6 +333,7 @@ class Organism {
     update () {
         this.living += 0.001;
         this.health -= 0.005;
+        this.breathe();
         // Update velocity
         this.velocity.add(this.acceleration);
         // Limit speed
@@ -377,6 +386,79 @@ class Organism {
             const steer = Vector2.sub(desired, this.velocity);
             steer.limit(this.maxForce);
             this.applyForce(steer);
+        }
+    }
+
+    /**
+     * Method copied from scratch_look.js
+     * Limit for ghost effect
+     * @const {object}
+     * @since botch-0.2
+     */
+    static get EFFECT_GHOST_LIMIT (){
+        return {min: 0, max: 100};
+    }
+
+    /**
+     * Method copied from scratch_look.js
+     * Limit for brightness effect
+     * @const {object}
+     * @since botch-0.2
+     */
+    static get EFFECT_BRIGHTNESS_LIMIT (){
+        return {min: -100, max: 100};
+    }
+
+    /**
+     * Method copied from scratch_look.js
+     * @param {string} effect effect
+     * @param {number} value value
+     * @return {number} new value
+     * @since botch-0.2
+     */
+    clampEffect (effect, value) {
+        let clampedValue = value;
+        switch (effect) {
+        case 'ghost':
+            clampedValue = MathUtil.clamp(value,
+                Organism.EFFECT_GHOST_LIMIT.min,
+                Organism.EFFECT_GHOST_LIMIT.max);
+            break;
+        case 'brightness':
+            clampedValue = MathUtil.clamp(value,
+                Organism.EFFECT_BRIGHTNESS_LIMIT.min,
+                Organism.EFFECT_BRIGHTNESS_LIMIT.max);
+            break;
+        }
+        return clampedValue;
+    }
+
+    /**
+     * Change the effect of the target
+     * @param {string} effect_ scratch effect
+     * @param {number} value scratch effect value
+     * @since botch-0.2
+     */
+    changeGraphicsEffect (effect_, value) {
+        const effect = effect_.toLowerCase();
+        if (!this.target.effects.hasOwnProperty(effect)) return;
+        let newValue = value + this.target.effects[effect];
+        newValue = this.clampEffect(effect, newValue);
+        this.target.setEffect(effect, newValue);
+    }
+
+    /**
+     * Mimic the "breath effect" with fisheye
+     * @since botch-0.2
+     */
+    breathe () {
+        if (this.currEffectStep > 0) {
+            const change = 5 * this.effectSign;
+            this.changeGraphicsEffect('fisheye', change);
+            this.currEffectStep--;
+        } else {
+            this.currEffectStep = this.effectStep;
+            this.effectSign *= -1;
         }
     }
 

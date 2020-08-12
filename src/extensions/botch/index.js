@@ -685,6 +685,12 @@ class Scratch3Botch {
         });
     }
 
+    /**
+     * Define the enemies for the scratch environment
+     * @param {args} args args
+     * @param {util} util util
+     * @since botch-0.2
+     */
     defineEnemies (args, util) {
         this.deleteClones(util.target.id);
         util.target.goToFront();
@@ -719,6 +725,11 @@ class Scratch3Botch {
         }
     }
 
+    /**
+     * Update the enemies position and behave with the environment
+     * @returns {string} error message
+     * @since botch-0.2
+     */
     moveEnemies () {
         if (this.organismMap.size < 1) {
             return 'There is no organism';
@@ -737,6 +748,7 @@ class Scratch3Botch {
     /**
      * Find the best organism according to its life span
      * @returns {Organism} best organism
+     * @since botch-0.2
      * TODO to improve performance this can be refreshed less time
      */
     findBestOrganism () {
@@ -751,6 +763,11 @@ class Scratch3Botch {
         return best;
     }
 
+    /**
+     * Return the food attraction of the best organism
+     * @returns {number} food attraction
+     * @since botch-0.2
+     */
     foodAtt () {
         const best = this.findBestOrganism();
         if (best) {
@@ -759,6 +776,11 @@ class Scratch3Botch {
         return 'nothing';
     }
 
+    /**
+     * Return the poison attraction of the best organism
+     * @returns {number} poison attraction
+     * @since botch-0.2
+     */
     poisonAtt () {
         const best = this.findBestOrganism();
         if (best) {
@@ -767,6 +789,11 @@ class Scratch3Botch {
         return 'nothing';
     }
 
+    /**
+     * Return the food perception of the best organism
+     * @returns {number} food perception
+     * @since botch-0.2
+     */
     foodDist () {
         const best = this.findBestOrganism();
         if (best) {
@@ -775,6 +802,11 @@ class Scratch3Botch {
         return 'nothing';
     }
 
+    /**
+     * Return the poison perception of the best organism
+     * @returns {number} poison perception
+     * @since botch-0.2
+     */
     poisonDist () {
         const best = this.findBestOrganism();
         if (best) {
@@ -783,6 +815,11 @@ class Scratch3Botch {
         return 'nothing';
     }
 
+    /**
+     * Return the health  of the best organism
+     * @returns {number} health
+     * @since botch-0.2
+     */
     health () {
         let best = null;
         let max = -1;
@@ -795,6 +832,11 @@ class Scratch3Botch {
         return best;
     }
 
+    /**
+     * The best organism will say something
+     * @param {args} args args
+     * @since botch-0.2
+     */
     sayBest (args) {
         let message = args.TEXT;
         const best = this.findBestOrganism();
