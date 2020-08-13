@@ -1,4 +1,4 @@
-const Vector2 = require('../../util/vector2');
+const Vector2 = require('./vector2');
 const MathUtil = require('../../util/math-util');
 
 /**
@@ -72,7 +72,7 @@ class Enemy {
             }
         }
 
-        if (closest) {
+        if (closest && closest.health > 0) {
             return this.seek(closest.target.x, closest.target.y);
         }
 

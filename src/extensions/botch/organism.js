@@ -6,9 +6,9 @@ if (typeof TextEncoder === 'undefined') {
     _TextEncoder = TextEncoder;
 }
 
-const Vector2 = require('../../util/vector2');
+const Vector2 = require('./vector2');
 const MathUtil = require('../../util/math-util');
-const svgen = require('../../util/svg-generator');
+const svgen = require('./svg-generator');
 const {loadCostume} = require('../../import/load-costume.js');
 const Enemy = require('./enemy');
 
@@ -498,6 +498,44 @@ class Organism {
         } else {
             this.currEffectStep = this.effectStep;
             this.effectSign *= -1;
+        }
+    }
+
+    /**
+     * Death animation whit a dissolve effect
+     * @param {util} util util
+     * @returns {boolean} true if it has finished the animation
+     * @since botch-0.2
+     */
+    deathAnimation (util) {
+        const message = 'X';
+        const Timer = require('../../util/timer');
+        if (util.stackFrame.timer) {
+            const timeElapsed = util.stackFrame.timer.timeElapsed();
+            if (timeElapsed < util.stackFrame.duration * 500) {
+                const frac = timeElapsed / (util.stackFrame.duration * 500);
+                const dx = frac * (util.stackFrame.end - util.stackFrame.start);
+                this.changeGraphicsEffect('ghost', util.stackFrame.start + dx);
+                this.runtime.emit('SAY', this.target, 'say', message);
+                util.yield();
+            } else {
+                this.runtime.emit('SAY', this.target, 'say', message);
+                this.changeGraphicsEffect('ghost', util.stackFrame.end);
+                return true;
+            }
+        } else {
+            // First time: save data for future use.
+            util.stackFrame.timer = new Timer();
+            util.stackFrame.timer.start();
+            util.stackFrame.duration = 1;
+            util.stackFrame.start = 0;
+            util.stackFrame.end = 100;
+            this.runtime.emit('SAY', this.target, 'say', message);
+            if (util.stackFrame.duration <= 0) {
+                this.changeGraphicsEffect('ghost', util.stackFrame.end);
+                return true;
+            }
+            util.yield();
         }
     }
 

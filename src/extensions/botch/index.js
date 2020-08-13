@@ -12,10 +12,11 @@ const ArgumentType = require('../../extension-support/argument-type');
 const BlockType = require('../../extension-support/block-type');
 const Cast = require('../../util/cast');
 const Organism = require('./organism');
-const svgen = require('../../util/svg-generator');
+const svgen = require('./svg-generator');
 const {loadCostume} = require('../../import/load-costume.js');
 const BotchStorageHelper = require('./botch-storage-helper.js');
 const Enemy = require('./enemy');
+const md5 = require('js-md5');
 
 /**
  * Create the new costume asset for the VM
@@ -62,14 +63,18 @@ class Scratch3Botch {
         this.maxForce = 0.5;
         this.enemiesMaxForce = 0.3;
         this.mass = 1;
-        this.storageHelper = new BotchStorageHelper(this.runtime.storage);
-        this.runtime.on(Runtime.PROJECT_LOADED, this.onProjectLoaded);
+        
+        this.runtime.on(Runtime.PROJECT_LOADED, (() => {
+            this.storage = this.runtime.storage;
+            this.storageHelper = new BotchStorageHelper(this.runtime.storage);
+            this.storage.addHelper(this.storageHelper);
+            // this.testStoreSprite();
+        }));
         
         console.log('Botch runtime:', runtime);
         console.log('Botch custom storageHelper:', this.storageHelper);
 
         window.BOTCH = this;
-        // this.testStoreSprite()
 
         // show the organism when stopped
         this.runtime.on(Runtime.PROJECT_STOP_ALL, (() => {
@@ -77,14 +82,6 @@ class Scratch3Botch {
                 this.organismMap.entries().next().value[1].target.setVisible(true);
             }
         }));
-    }
-
-    /**
-     * use addHelper after
-     * @since botch-0.2
-     */
-    onProjectLoaded () {
-        this.storage.addHelper(this.storageHelper);
     }
 
     // <LOAD COSTUMES METHODS>
@@ -291,7 +288,6 @@ class Scratch3Botch {
     }
 
     getSpriteMenu () {
-        // TODO remove _editingTarget from menu
         if (this.runtime.targets.length > 1) {
             return this.runtime.targets.filter(t => t.isOriginal && !t.isStage).map(t => t.getName());
         }
@@ -337,7 +333,7 @@ class Scratch3Botch {
     behaviors (args, util) {
         if (this.poisonMap.size < 1 && this.foodMap.size < 1) {
             this.confusion('I need food');
-            return 'I need food or poison'; // TODO CONFUSION
+            return 'I need food or poison';
         }
 
         if (this.organismMap.size <= 1) {
@@ -348,30 +344,35 @@ class Scratch3Botch {
 
         for (const org of this.organismMap.values()) {
             if (!org.target.isOriginal) { // Only the clones are managed
-                org.boundaries(
-                    this.runtime.constructor.STAGE_WIDTH,
-                    this.runtime.constructor.STAGE_HEIGHT);
-                org.refreshArgs(this.mass, this.maxForce);
-                org.behaviors(this.foodMap, this.poisonMap);
-                org.update();
+                if (org.health > 0) {
+                    org.boundaries(
+                        this.runtime.constructor.STAGE_WIDTH,
+                        this.runtime.constructor.STAGE_HEIGHT);
+                    org.refreshArgs(this.mass, this.maxForce);
+                    org.behaviors(this.foodMap, this.poisonMap);
+                    org.update();
 
-                const newOrg = org.clone();
-                if (newOrg !== null) {
-                    const newClone = this.createClone(org.target);
-                    if (newClone) {
-                        this.runtime.addTarget(newClone);
-                        newOrg.target = newClone;
+                    const newOrg = org.clone();
+                    if (newOrg !== null) {
+                        const newClone = this.createClone(org.target);
+                        if (newClone) {
+                            this.runtime.addTarget(newClone);
+                            newClone.clearEffects();
+                            newOrg.target = newClone;
+                        }
+                        this.organismMap.set(newClone.id, newOrg);
                     }
-                    this.organismMap.set(newClone.id, newOrg);
                 }
 
                 if (org.dead()) {
-                    this.runtime.disposeTarget(org.target);
-                    this.runtime.stopForTarget(org.target);
-                    this.organismMap.delete(org.target.id);
+                    if (org.deathAnimation(util)) { // wait the end of animation
+                        this.runtime.disposeTarget(org.target);
+                        this.runtime.stopForTarget(org.target);
+                        this.organismMap.delete(org.target.id);
 
-                    // when an organism die, it will drop a food
-                    this.createFoodXY(org.target.x, org.target.y);
+                        // when an organism die, it will drop a food
+                        this.createFoodXY(org.target.x, org.target.y);
+                    }
                 }
             }
         }
@@ -387,7 +388,7 @@ class Scratch3Botch {
     behaveEnemies (args, util) {
         if (this.poisonMap.size < 1 && this.foodMap.size < 1) {
             this.confusion('I need food');
-            return 'I need food or enemies'; // TODO CONFUSION
+            return 'I need food or enemies';
         }
 
         if (this.organismMap.size <= 1) {
@@ -398,30 +399,35 @@ class Scratch3Botch {
 
         for (const org of this.organismMap.values()) {
             if (!org.target.isOriginal) { // Only the clones are managed
-                org.boundaries(
-                    this.runtime.constructor.STAGE_WIDTH,
-                    this.runtime.constructor.STAGE_HEIGHT);
-                org.refreshArgs(this.mass, this.maxForce);
-                org.behaviors(this.foodMap, this.enemiesMap);
-                org.update();
+                if (org.health > 0) {
+                    org.boundaries(
+                        this.runtime.constructor.STAGE_WIDTH,
+                        this.runtime.constructor.STAGE_HEIGHT);
+                    org.refreshArgs(this.mass, this.maxForce);
+                    org.behaviors(this.foodMap, this.enemiesMap);
+                    org.update();
 
-                const newOrg = org.clone();
-                if (newOrg !== null) {
-                    const newClone = this.createClone(org.target);
-                    if (newClone) {
-                        this.runtime.addTarget(newClone);
-                        newOrg.target = newClone;
+                    const newOrg = org.clone();
+                    if (newOrg !== null) {
+                        const newClone = this.createClone(org.target);
+                        if (newClone) {
+                            this.runtime.addTarget(newClone);
+                            newClone.clearEffects();
+                            newOrg.target = newClone;
+                        }
+                        this.organismMap.set(newClone.id, newOrg);
                     }
-                    this.organismMap.set(newClone.id, newOrg);
                 }
 
                 if (org.dead()) {
-                    this.runtime.disposeTarget(org.target);
-                    this.runtime.stopForTarget(org.target);
-                    this.organismMap.delete(org.target.id);
+                    if (org.deathAnimation(util)) { // wait the end of animation
+                        this.runtime.disposeTarget(org.target);
+                        this.runtime.stopForTarget(org.target);
+                        this.organismMap.delete(org.target.id);
 
-                    // when an organism die, it will drop a food
-                    this.createFoodXY(org.target.x, org.target.y);
+                        // when an organism die, it will drop a food
+                        this.createFoodXY(org.target.x, org.target.y);
+                    }
                 }
             }
         }
@@ -447,7 +453,7 @@ class Scratch3Botch {
 
         org.svg = newSvg;
 
-        this.organismMap.set(util.target.id, org); // check if is need to delete this entry somewhere TODO
+        this.organismMap.set(util.target.id, org);
 
         this.uploadCostumeEdit(newSvg, util.target.id);
 
@@ -891,9 +897,11 @@ class Scratch3Botch {
         let best = null;
         let max = -1;
         for (const org of this.organismMap.values()) {
-            if (org.living > max) {
-                best = org;
-                max = org.living;
+            if (!org.target.isOriginal) {
+                if (org.living > max) {
+                    best = org;
+                    max = org.living;
+                }
             }
         }
         return best;

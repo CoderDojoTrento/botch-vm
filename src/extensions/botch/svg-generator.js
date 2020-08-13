@@ -1,5 +1,5 @@
 const Vector2 = require('./vector2');
-const MathUtil = require('./math-util');
+const MathUtil = require('../../util/math-util');
 
 class SVGgen {
     /**
