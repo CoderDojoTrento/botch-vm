@@ -7,7 +7,7 @@ if (typeof TextEncoder === 'undefined') {
 }
 
 /* eslint-disable no-negated-condition */
-
+const Runtime = require('../../engine/runtime');
 const ArgumentType = require('../../extension-support/argument-type');
 const BlockType = require('../../extension-support/block-type');
 const Cast = require('../../util/cast');
@@ -51,20 +51,35 @@ class Scratch3Botch {
         this.vehicleMap = new Map();
         this.organismMap = new Map();
         this.enemiesMap = new Map();
-        this.storage = runtime.storage;
+        this.storage = this.runtime.storage;
         this.foodMap = new Map();
         this.poisonMap = new Map();
         this.maxForce = 0.5;
         this.enemiesMaxForce = 0.3;
         this.mass = 1;
-        this.storageHelper = new BotchStorageHelper(runtime.storage);
-        runtime.storage.addHelper(this.storageHelper);
+        this.storageHelper = new BotchStorageHelper(this.runtime.storage);
+        this.runtime.on(Runtime.PROJECT_LOADED, this.onProjectLoaded);
+        
         console.log('Botch runtime:', runtime);
         console.log('Botch custom storageHelper:', this.storageHelper);
 
         window.BOTCH = this;
         // this.testStoreSprite()
 
+        // show the organism when stopped
+        this.runtime.on(Runtime.PROJECT_STOP_ALL, (() => {
+            if (this.organismMap && this.organismMap.size > 0) {
+                this.organismMap.entries().next().value[1].target.setVisible(true);
+            }
+        }));
+    }
+
+    /**
+     * use addHelper after
+     * @since botch-0.2
+     */
+    onProjectLoaded () {
+        this.storage.addHelper(this.storageHelper);
     }
 
     // <LOAD COSTUMES METHODS>
@@ -414,6 +429,7 @@ class Scratch3Botch {
      * @since botch-0.1
      */
     createPopulation (args, util) {
+        this.storage = this.runtime.storage; // add this for auto loading the extension
         this.deleteClones(util.target.id);
         util.target.goToFront();
         this.organismMap = new Map();
