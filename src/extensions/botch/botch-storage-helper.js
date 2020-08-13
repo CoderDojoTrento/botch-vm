@@ -186,7 +186,7 @@ const DEFAULT_LIBRARY_SPRITES = [
  * @since botch-0.1
  */
 class BotchStorageHelper extends Helper {
-    constructor(parent) {
+    constructor (parent) {
         super(parent);
 
         /**
@@ -197,7 +197,7 @@ class BotchStorageHelper extends Helper {
         this.assets = {};
 
         BotchBuiltinAssets.forEach(assetRecord => {
-            assetRecord.id = this._store(assetRecord.type, assetRecord.format, assetRecord.data, assetRecord.id);
+            assetRecord.id = this._store(assetRecord.type, assetRecord.format, assetRecord.data, assetRecord.id, assetRecord.name);
         });
     }
 
@@ -254,12 +254,22 @@ class BotchStorageHelper extends Helper {
      * @param {DataFormat} dataFormat - The dataFormat of the data for the cached asset.
      * @param {Buffer} data - The data for the cached asset.
      * @param {(string|number)} id - The id for the cached asset.
+     * @param {string} name - The name for the cached asset (Botch: we added it)
      * @returns {string} The calculated id of the cached asset, or the supplied id if the asset is mutable.
      */
-    _store (assetType, dataFormat, data, id) {
+    _store (assetType, dataFormat, data, id, name) {
+        if (!name){
+            throw new Error(`Missing name:${name}`);
+        }
+        if (!name.trim()){
+            throw new Error('Provided name is all blank !');
+        }
         if (!dataFormat) throw new Error('Data cached without specifying its format');
         if (id !== '' && id !== null && typeof id !== 'undefined') {
-            if (this.assets.hasOwnProperty(id) && assetType.immutable) return id;
+            if (this.assets.hasOwnProperty(id) && assetType.immutable) {
+                console.log('Item already stored !');
+                return id;
+            }
         } else if (assetType.immutable) {
             id = md5(data);
         } else {
@@ -269,7 +279,8 @@ class BotchStorageHelper extends Helper {
             type: assetType,
             format: dataFormat,
             id: id,
-            data: data
+            data: data,
+            name: name
         };
         return id;
     }
@@ -296,18 +307,18 @@ class BotchStorageHelper extends Helper {
      * @since botch 0.1
      */
     get_all_tags () {
-        s = new Set();
+        const s = new Set();
         for (const id in this.assets) {
-            asset = this.assets[id];
+            const asset = this.assets[id];
             if (asset.tags) {
-                for (tag of assets.tags) {
+                for (const tag of asset.tags) {
                     s.add(tag);
                 }
             }
         }
-        for (asset in DEFAULT_LIBRARY_SPRITES) {
+        for (const asset in DEFAULT_LIBRARY_SPRITES) {
             if (asset.tags) {
-                for (tag of assets.tags) {
+                for (const tag of asset.tags) {
                     s.add(tag);
                 }
             }
@@ -315,21 +326,22 @@ class BotchStorageHelper extends Helper {
 
         const sorted = Array.from(s);
         sorted.sort();
-        ret = [];
-        for (tag of sorted) {
-            ret.push({ tag: tag, tag }); // intlLabel: messages.animals})
+        const ret = [];
+        for (const tag of sorted) {
+            ret.push({tag: tag, intlLabel: tag}); // intlLabel: messages.animals})
         }
         return ret;
     }
 
     /**
-     * Loads a sprite from the store and outputs a Promise containing
-     * the sprite in a format suitable to be viewed in a library panel
+     * Loads a sprite from the store
      *
      * @since botch-0.1
-     * @param id
+     * @param {string} id  Sprite id
+     * @returns {Promise} Promise containing
+     * the sprite in a format suitable to be viewed in a library panel
      */
-    load_library_sprite (id) {
+    loadLibrarySprite (id) {
 
         const JSZip = require('jszip');
 
@@ -342,17 +354,17 @@ class BotchStorageHelper extends Helper {
         return JSZip.loadAsync(storedSprite.data).then(zipObj => {
             const spriteFile = zipObj.file('sprite.json');
             if (!spriteFile) {
-                log.error("Couldn't find sprite.json inside stored Sprite !");
+                console.log.error("Couldn't find sprite.json inside stored Sprite !");
                 return Promise.resolve(null);
 
             }
             if (!JSZip.support.uint8array) {
-                log.error('JSZip uint8array is not supported in this browser.');
+                console.log.error('JSZip uint8array is not supported in this browser.');
                 return Promise.resolve(null);
             }
             return spriteFile.async('string').then(data => {
                 console.log('Botch: unzipped data:', data);
-                sprite = JSON.parse(data);
+                const sprite = JSON.parse(data);
 
                 // in deserialize-assets is written:
                 //    "Zip will not be provided if loading project json from server"
@@ -365,7 +377,7 @@ class BotchStorageHelper extends Helper {
                 //            console.error(targets);
                 //            throw new Error("Found more than one target!!")
                 //        }
-                asset = {};
+                const asset = {};
                 asset.type = storage.AssetType.Sprite;
                 // storage.DataFormat.SB3,
                 asset.tags = [
@@ -392,20 +404,21 @@ class BotchStorageHelper extends Helper {
     }
 
     /**
-     * Loads all sprites from the store and outputs a Promise containing
-     * the sprites in a format suitable to be viewed in a library panel
+     * Loads all sprites from the store
      *
-     * @see load_library_sprite
+     * @see loadLibrarySprite
      * @since botch-0.1
+     * @returns {Promise} outputs a Promise containing
+     * the sprites in a format suitable to be viewed in a library panel
      */
-    load_library_sprites () {
-        ret = [];
+    loadLibrarySprites () {
+        const ret = [];
         for (const id in this.assets) {
-            ret.push(this.load_library_sprite(id));
+            ret.push(this.loadLibrarySprite(id));
         }
-        return Promise.all(ret).then(lib_sprites => {
-            console.log('lib_sprites=', lib_sprites);
-            return lib_sprites.concat(DEFAULT_LIBRARY_SPRITES);
+        return Promise.all(ret).then(libSprites => {
+            console.log('libSprites=', libSprites);
+            return libSprites.concat(DEFAULT_LIBRARY_SPRITES);
         });
 
     }
