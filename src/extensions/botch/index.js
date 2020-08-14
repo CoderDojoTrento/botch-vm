@@ -331,6 +331,7 @@ class Scratch3Botch {
 
     /**
      * Behave with the food and poison
+     * now this block works with "when I start as a clone", botch-0.2
      * @param {args} args args
      * @param {util} util util
      * @returns {string} message
@@ -341,44 +342,41 @@ class Scratch3Botch {
             this.confusion('I need food');
             return 'I need food or poison';
         }
-
         if (this.organismMap.size <= 1) {
             util.target.setVisible(true);
             this.runtime.stopAll();
             return 'There is no organism';
         }
+        const org = this.organismMap.get(util.target.id);
+        if (!org.target.isOriginal) { // Only the clones are managed
+            if (org.health > 0) {
+                org.boundaries(
+                    this.runtime.constructor.STAGE_WIDTH,
+                    this.runtime.constructor.STAGE_HEIGHT);
+                org.refreshArgs(this.mass, this.maxForce);
+                org.behaviors(this.foodMap, this.poisonMap);
+                org.update();
 
-        for (const org of this.organismMap.values()) {
-            if (!org.target.isOriginal) { // Only the clones are managed
-                if (org.health > 0) {
-                    org.boundaries(
-                        this.runtime.constructor.STAGE_WIDTH,
-                        this.runtime.constructor.STAGE_HEIGHT);
-                    org.refreshArgs(this.mass, this.maxForce);
-                    org.behaviors(this.foodMap, this.poisonMap);
-                    org.update();
-
-                    const newOrg = org.clone();
-                    if (newOrg !== null) {
-                        const newClone = this.createClone(org.target);
-                        if (newClone) {
-                            this.runtime.addTarget(newClone);
-                            newClone.clearEffects();
-                            newOrg.target = newClone;
-                        }
-                        this.organismMap.set(newClone.id, newOrg);
+                const newOrg = org.clone();
+                if (newOrg !== null) {
+                    const newClone = this.createClone(org.target);
+                    if (newClone) {
+                        this.runtime.addTarget(newClone);
+                        newClone.clearEffects();
+                        newOrg.target = newClone;
                     }
+                    this.organismMap.set(newClone.id, newOrg);
                 }
+            }
 
-                if (org.dead()) {
-                    if (org.deathAnimation(util)) { // wait the end of animation
-                        this.runtime.disposeTarget(org.target);
-                        this.runtime.stopForTarget(org.target);
-                        this.organismMap.delete(org.target.id);
+            if (org.dead()) {
+                if (org.deathAnimation(util)) { // wait the end of animation
+                    this.runtime.disposeTarget(org.target);
+                    this.runtime.stopForTarget(org.target);
+                    this.organismMap.delete(org.target.id);
 
-                        // when an organism die, it will drop a food
-                        this.createFoodXY(org.target.x, org.target.y);
-                    }
+                    // when an organism die, it will drop a food
+                    this.createFoodXY(org.target.x, org.target.y);
                 }
             }
         }
@@ -386,6 +384,7 @@ class Scratch3Botch {
 
     /**
      * Behave with non static sprite (enemies)
+     * this block works with "when I start as a clone"
      * @param {args} args args
      * @param {util} util util
      * @return {string} message
@@ -402,38 +401,36 @@ class Scratch3Botch {
             this.runtime.stopAll();
             return 'There is no organism';
         }
+        const org = this.organismMap.get(util.target.id);
+        if (!org.target.isOriginal) { // Only the clones are managed
+            if (org.health > 0) {
+                org.boundaries(
+                    this.runtime.constructor.STAGE_WIDTH,
+                    this.runtime.constructor.STAGE_HEIGHT);
+                org.refreshArgs(this.mass, this.maxForce);
+                org.behaviors(this.foodMap, this.enemiesMap);
+                org.update();
 
-        for (const org of this.organismMap.values()) {
-            if (!org.target.isOriginal) { // Only the clones are managed
-                if (org.health > 0) {
-                    org.boundaries(
-                        this.runtime.constructor.STAGE_WIDTH,
-                        this.runtime.constructor.STAGE_HEIGHT);
-                    org.refreshArgs(this.mass, this.maxForce);
-                    org.behaviors(this.foodMap, this.enemiesMap);
-                    org.update();
-
-                    const newOrg = org.clone();
-                    if (newOrg !== null) {
-                        const newClone = this.createClone(org.target);
-                        if (newClone) {
-                            this.runtime.addTarget(newClone);
-                            newClone.clearEffects();
-                            newOrg.target = newClone;
-                        }
-                        this.organismMap.set(newClone.id, newOrg);
+                const newOrg = org.clone();
+                if (newOrg !== null) {
+                    const newClone = this.createClone(org.target);
+                    if (newClone) {
+                        this.runtime.addTarget(newClone);
+                        newClone.clearEffects();
+                        newOrg.target = newClone;
                     }
+                    this.organismMap.set(newClone.id, newOrg);
                 }
+            }
 
-                if (org.dead()) {
-                    if (org.deathAnimation(util)) { // wait the end of animation
-                        this.runtime.disposeTarget(org.target);
-                        this.runtime.stopForTarget(org.target);
-                        this.organismMap.delete(org.target.id);
+            if (org.dead()) {
+                if (org.deathAnimation(util)) { // wait the end of animation
+                    this.runtime.disposeTarget(org.target);
+                    this.runtime.stopForTarget(org.target);
+                    this.organismMap.delete(org.target.id);
 
-                        // when an organism die, it will drop a food
-                        this.createFoodXY(org.target.x, org.target.y);
-                    }
+                    // when an organism die, it will drop a food
+                    this.createFoodXY(org.target.x, org.target.y);
                 }
             }
         }
