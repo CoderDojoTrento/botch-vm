@@ -1,11 +1,11 @@
 const md5 = require('js-md5');
 
 // const log = require('./log');
-scratchStorage = require('scratch-storage');
-
+const scratchStorage = require('scratch-storage');
+const log = require('../../util/log');
 const Asset = scratchStorage.Asset;
-const AssetType = scratchStorage.AssetType;
-const DataFormat = scratchStorage.DataFormat;
+/* const AssetType = scratchStorage.AssetType;
+const DataFormat = scratchStorage.DataFormat; */
 // const Helper = require('scratch-storage/Helper');
 const Helper = require('scratch-storage/src/Helper.js');
 
@@ -25,7 +25,7 @@ const DEFAULT_BOTCH_SPRITES = require('./default-botch-sprites.js');
  * @since botch-0.1
  */
 const BotchBuiltinAssets = [
-    /** TODO PUT OURS
+    /** TO DO PUT OURS
     {
         type: AssetType.ImageBitmap,
         format: DataFormat.PNG,
@@ -79,13 +79,14 @@ class BotchStorageHelper extends Helper {
      * Call `setDefaultAssetId` on the parent `ScratchStorage` instance to register all built-in default assets.
      * @since botch-0.1
      */
-    registerDefaultAssets () {
+    // COMMENTED FOR DefaultBotchSprites not defined Raffaele
+    /* registerDefaultAssets () {
         const numAssets = DefaultBotchSprites.length;
         for (let assetIndex = 0; assetIndex < numAssets; ++assetIndex) {
             const assetRecord = DefaultBotchSprites[assetIndex];
             this.parent.setDefaultAssetId(assetRecord.type, assetRecord.id);
         }
-    }
+    } */
 
 
     /**
@@ -114,7 +115,7 @@ class BotchStorageHelper extends Helper {
      * @since botch-0.1
      */
     cache (assetType, dataFormat, data, id) {
-        console.log.warn('Deprecation: BotchStorageHelper.cache has been replaced with BotchStorageHelper.store.');
+        log.log.warn('Deprecation: BotchStorageHelper.cache has been replaced with BotchStorageHelper.store.');
         return this.store(assetType, dataFormat, data, id);
     }
 
@@ -141,7 +142,7 @@ class BotchStorageHelper extends Helper {
         if (!dataFormat) throw new Error('Data cached without specifying its format');
         if (id !== '' && id !== null && typeof id !== 'undefined') {
             if (this.assets.hasOwnProperty(id) && assetType.immutable) {
-                console.log('Item already stored !');
+                log.log('Item already stored !');
                 return id;
             }
         } else if (assetType.immutable) {

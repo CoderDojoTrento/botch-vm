@@ -68,7 +68,7 @@ class Scratch3Botch {
         this.mass = 1;
         
         this.runtime.on(Runtime.PROJECT_LOADED, (() => {
-            console.log('Botch: on PROJECT_LOADED');
+            log.log('Botch: on PROJECT_LOADED');
             this.storage = this.runtime.storage;
             if (!this.storageHelper){
                 this.storageHelper = new BotchStorageHelper(this.runtime.storage);
@@ -77,8 +77,8 @@ class Scratch3Botch {
             // this.testStoreSprite();
         }));
         
-        console.log('Botch runtime:', runtime);
-        console.log('Botch custom storageHelper:', this.storageHelper);
+        log.log('Botch runtime:', runtime);
+        log.log('Botch custom storageHelper:', this.storageHelper);
 
         window.BOTCH = this;
 
@@ -300,9 +300,9 @@ class Scratch3Botch {
     }
 
     debugConsole (args, util) {
-        console.log(this);
-        console.log(args);
-        console.log(util);
+        log.log(this);
+        log.log(args);
+        log.log(util);
     }
 
     /**
@@ -704,7 +704,8 @@ class Scratch3Botch {
      *
       * Exports a sprite in the sprite3 format.
       * @param {string} targetId ID of the target to export
-      * @param {string=} optZipType Optional type that the resulting zip should be outputted in. Options are: base64, binarystring,
+      * @param {string=} optZipType Optional type that the resulting zip should be outputted in.
+      *                             Options are: base64, binary string,
       * array, uint8array, arraybuffer, blob, or nodebuffer. Defaults to
       * blob if argument not provided.
       * @param {string=} newName Optional new name
@@ -732,9 +733,9 @@ class Scratch3Botch {
         const StringUtil = require('../../util/string-util');
 
         const soundDescs = serializeSounds(this.runtime, targetId);
-        console.log('md5(soundDescs)', md5(soundDescs));
+        log.log('md5(soundDescs)', md5(soundDescs));
         const costumeDescs = serializeCostumes(this.runtime, targetId);
-        console.log('md5(costumeDescs)', md5(costumeDescs));
+        log.log('md5(costumeDescs)', md5(costumeDescs));
         const serialized = sb3.serialize(this.runtime, targetId);
         
         if (newName){
@@ -742,7 +743,7 @@ class Scratch3Botch {
         }
         const spriteJson = StringUtil.stringify(serialized);
 
-        console.log('md5(spriteJson)', md5(spriteJson));
+        log.log('md5(spriteJson)', md5(spriteJson));
 
         // Botch: would have been nicer to calculate md5 of the zip
         // but md5 varies between zips: https://github.com/Stuk/jszip/issues/590
@@ -779,7 +780,7 @@ class Scratch3Botch {
      * @since botch-0.1
      */
     storeSprite (id, newName = '') {
-        console.log('Botch: trying to store sprite with original id', id);
+        log.log('Botch: trying to store sprite with original id', id);
 
         if (!id){
             throw new Error(`Got empty id:${id}!`);
@@ -795,7 +796,7 @@ class Scratch3Botch {
 
         const retp = p.then(data => {
             
-            console.log('Botch: using newId from md5:', newId);
+            log.log('Botch: using newId from md5:', newId);
             this.storageHelper._store(
                 this.storage.AssetType.Sprite,
                 this.storage.DataFormat.SB3,
@@ -803,9 +804,9 @@ class Scratch3Botch {
                 newId,
                 newName ? newName : this.runtime.getTargetById(id).sprite.name
             );
-            console.log('Botch: emitting ', Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
+            log.log('Botch: emitting ', Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
             this.runtime.emit(Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
-            console.log('Botch: stored sprite with newId', newId);
+            log.log('Botch: stored sprite with newId', newId);
 
         });
         
@@ -829,21 +830,21 @@ class Scratch3Botch {
 
         const storedSprite = this.storageHelper.assets[id];
 
-        console.log('storedSprite=', storedSprite);
+        log.log('storedSprite=', storedSprite);
 
         return JSZip.loadAsync(storedSprite.data).then(zipObj => {
             const spriteFile = zipObj.file('sprite.json');
             if (!spriteFile) {
-                console.log.error("Couldn't find sprite.json inside stored Sprite !");
+                log.log.error("Couldn't find sprite.json inside stored Sprite !");
                 return Promise.resolve(null);
 
             }
             if (!JSZip.support.uint8array) {
-                console.log.error('JSZip uint8array is not supported in this browser.');
+                log.log.error('JSZip uint8array is not supported in this browser.');
                 return Promise.resolve(null);
             }
             return spriteFile.async('string').then(data => {
-                console.log('Botch: unzipped data (only sprite, no costume/sound data):', data);
+                log.log('Botch: unzipped data (only sprite, no costume/sound data):', data);
                 const sprite = JSON.parse(data);
 
                 // in deserialize-assets is written:
@@ -852,9 +853,9 @@ class Scratch3Botch {
                 
                 // deserialize injects lots of runtime stuff we don't need
                 return sb3.deserialize(sprite, this.runtime, zipObj, true)
-                    .then(({targets, extensions}) => {
+                    .then(({targets/* , extensions */}) => {
                         if (targets.length > 1){
-                            console.error(targets);
+                            log.error(targets);
                             throw new Error('Found more than one target!!');
                         }
                         const asset = {};
@@ -870,7 +871,7 @@ class Scratch3Botch {
                         ];
 
 
-                        // TODO what about the id? createAsset setss assetId and assetName
+                        // TO DO what about the id? createAsset setss assetId and assetName
                         asset.name = sprite.name;
                         // Botch: this was original line of code, don't like it, should consider whole sprite
                         // asset.md5 = sprite.costumes && sprite.costumes[0].md5ext;
@@ -889,7 +890,7 @@ class Scratch3Botch {
                         
                         sprite.objName = sprite.name;
                         // this.installTargets(targets, extensions, false)
-                        console.log('Botch: completely loaded asset:', asset);
+                        log.log('Botch: completely loaded asset:', asset);
                         return asset;
                     });
             });
@@ -912,7 +913,7 @@ class Scratch3Botch {
         }
         return Promise.all(inStorage).then(libSprites => {
             const ret = libSprites.concat(DEFAULT_BOTCH_SPRITES);
-            console.log('libSprites=', ret);
+            log.log('libSprites=', ret);
             return ret;
         });
 
@@ -922,17 +923,17 @@ class Scratch3Botch {
      * @since botch-0.1
      */
     testStoreSprite () {
-        console.log('BOTCH TEST: storing first sprite in custom storageHelper');
+        log.log('BOTCH TEST: storing first sprite in custom storageHelper');
         const id = this.runtime.targets[1].id;
 
         this.storeSprite(id).then(() => {
 
             this.runtime.storage.load('sb3', id).then(storedSprite => {
-                console.log('loaded storedSprite', storedSprite);
+                log.log('loaded storedSprite', storedSprite);
                 this.loadLibrarySprite(id).then(spriteAsset => {
-                    console.log('Sprite for library (sort of an asset):', spriteAsset);
+                    log.log('Sprite for library (sort of an asset):', spriteAsset);
                     this.loadLibrarySprites().then(libSprites => {
-                        console.log('All sprites for library:', libSprites);
+                        log.log('All sprites for library:', libSprites);
                     });
                 });
             });
@@ -1003,7 +1004,7 @@ class Scratch3Botch {
      * Find the best organism according to its life span
      * @returns {Organism} best organism
      * @since botch-0.2
-     * TODO to improve performance this can be refreshed less time
+     * TO DO to improve performance this can be refreshed less time
      */
     findBestOrganism () {
         let best = null;

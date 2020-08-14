@@ -291,7 +291,7 @@ class Organism {
     }
 
     /**
-     * TODO IS CREATING PROBLEMS WHEN USED
+     * TO DO IS CREATING PROBLEMS WHEN USED
      * Check if the sprite touch the object
      * @param {RenderedTarget} obj object to check if touched
      * @returns {boolean} true if is touched
