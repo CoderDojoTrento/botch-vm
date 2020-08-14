@@ -68,9 +68,12 @@ class Scratch3Botch {
         this.mass = 1;
         
         this.runtime.on(Runtime.PROJECT_LOADED, (() => {
+            console.log('Botch: on PROJECT_LOADED');
             this.storage = this.runtime.storage;
-            this.storageHelper = new BotchStorageHelper(this.runtime.storage);
-            this.storage.addHelper(this.storageHelper);
+            if (!this.storageHelper){
+                this.storageHelper = new BotchStorageHelper(this.runtime.storage);
+                this.storage.addHelper(this.storageHelper);
+            }
             // this.testStoreSprite();
         }));
         
