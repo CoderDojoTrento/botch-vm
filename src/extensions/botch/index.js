@@ -18,7 +18,7 @@ const BotchStorageHelper = require('./botch-storage-helper.js');
 
 const Enemy = require('./enemy');
 const DEFAULT_BOTCH_SPRITES = require('./default-botch-sprites.js');
-
+const log = require('../../util/log');
 const md5 = require('js-md5');
 
 /**
@@ -793,7 +793,7 @@ class Scratch3Botch {
         const p = this.exportSprite(id, 'uint8array', newName);
         const newId = p.md5;
 
-        return p.then(data => {
+        const retp = p.then(data => {
             
             console.log('Botch: using newId from md5:', newId);
             this.storageHelper._store(
@@ -808,6 +808,9 @@ class Scratch3Botch {
             console.log('Botch: stored sprite with newId', newId);
 
         });
+        
+        retp.md5 = newId;
+        return retp;
     }
     
     /**
