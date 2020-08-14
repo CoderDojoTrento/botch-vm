@@ -18,6 +18,8 @@ const svgen = require('../../util/svg-generator');
 const {loadCostume} = require('../../import/load-costume.js');
 const BotchStorageHelper = require('./botch-storage-helper.js');
 
+const DEFAULT_BOTCH_SPRITES = require('./default-botch-sprites.js');
+
 const md5 = require('js-md5');
 
 /*
@@ -659,22 +661,125 @@ class Scratch3Botch {
         });
     }
     
+    /**
+     * Loads a sprite from the store
+     *
+     * @since botch-0.1
+     * @param {string} id  Sprite id
+     * @returns {Promise} Promise containing
+     * the sprite in a format suitable to be viewed in a library panel
+     */
+    loadLibrarySprite (id) {
+        const sb3 = require('../../serialization/sb3');
+        const JSZip = require('jszip');
 
+        const storage = this.storage;
+
+        const storedSprite = this.storageHelper.assets[id];
+
+        console.log('storedSprite=', storedSprite);
+
+        return JSZip.loadAsync(storedSprite.data).then(zipObj => {
+            const spriteFile = zipObj.file('sprite.json');
+            if (!spriteFile) {
+                console.log.error("Couldn't find sprite.json inside stored Sprite !");
+                return Promise.resolve(null);
+
+            }
+            if (!JSZip.support.uint8array) {
+                console.log.error('JSZip uint8array is not supported in this browser.');
+                return Promise.resolve(null);
+            }
+            return spriteFile.async('string').then(data => {
+                console.log('Botch: unzipped data (only sprite, no costume/sound data):', data);
+                const sprite = JSON.parse(data);
+
+                // in deserialize-assets is written:
+                //    "Zip will not be provided if loading project json from server"
+                // let zip = null;
+                
+                // deserialize injects lots of runtime stuff we don't need
+                return sb3.deserialize(sprite, this.runtime, zipObj, true)
+                    .then(({targets, extensions}) => {
+                        if (targets.length > 1){
+                            console.error(targets);
+                            throw new Error('Found more than one target!!');
+                        }
+                        const asset = {};
+                        asset.type = storage.AssetType.Sprite;
+                        // storage.DataFormat.SB3,
+                        asset.tags = [
+                            'botch'
+                        ];
+                        asset.info = [ // What is this ??
+                            0,
+                            1,
+                            1
+                        ];
+
+
+                        // TODO what about the id? createAsset setss assetId and assetName
+                        asset.name = sprite.name;
+                        // Botch: this was original line of code, don't like it, should consider whole sprite
+                        // asset.md5 = sprite.costumes && sprite.costumes[0].md5ext;
+                        asset.md5 = id;
+                        asset.json = sprite;
+                        // overriding so it also contains costume assets data
+                        
+                        sprite.costumes = targets[0].sprite.costumes;
+                        for (const cost of sprite.costumes){
+                            // NOTE 1: in costumes 'md5' field also has '.svg' appended
+                            
+                            cost.md5ext = cost.md5;
+                            // NOTE 2: in preloaded data there is no md5, only md5ext
+                            delete cost.md5;
+                        }
+                        
+                        sprite.objName = sprite.name;
+                        // this.installTargets(targets, extensions, false)
+                        console.log('Botch: completely loaded asset:', asset);
+                        return asset;
+                    });
+            });
+        });
+
+    }
+
+    /**
+     * Loads all sprites from the store
+     *
+     * @see loadLibrarySprite
+     * @since botch-0.1
+     * @returns {Promise} outputs a Promise containing
+     * the sprites in a format suitable to be viewed in a library panel
+     */
+    loadLibrarySprites () {
+        const inStorage = [];
+        for (const id in this.storageHelper.assets) {
+            inStorage.push(this.loadLibrarySprite(id));
+        }
+        return Promise.all(inStorage).then(libSprites => {
+            const ret = libSprites.concat(DEFAULT_BOTCH_SPRITES);
+            console.log('libSprites=', ret);
+            return ret;
+        });
+
+    }
     /**
      * Quick and dirty test, stores first sprite in the custom storageHelper
      * @since botch-0.1
      */
     testStoreSprite () {
-        console.log('BOTCH TEST: storing first sprite in custome storageHelper');
+        console.log('BOTCH TEST: storing first sprite in custom storageHelper');
         const id = this.runtime.targets[1].id;
 
         this.storeSprite(id).then(() => {
 
             this.runtime.storage.load('sb3', id).then(storedSprite => {
                 console.log('loaded storedSprite', storedSprite);
-                this.storageHelper.loadLibrarySprite(id).then(spriteAsset => {
+                this.loadLibrarySprite(id).then(spriteAsset => {
                     console.log('Sprite for library (sort of an asset):', spriteAsset);
-                    this.storageHelper.loadLibrarySprites().then(libSprites => {
+                    this.loadLibrarySprites().then(libSprites => {
                         console.log('All sprites for library:', libSprites);
                     });
                 });
