@@ -883,6 +883,14 @@ class Scratch3Botch {
                         for (const cost of sprite.costumes){
                             // NOTE 1: in costumes 'md5' field also has '.svg' appended
                             
+                            // this way it will have inside the precious encodeDataURI method
+                            cost.asset = new this.storage.Asset(
+                                cost.asset.assetType,
+                                cost.asset.assetId,
+                                cost.asset.dataFormat,
+                                cost.asset.data,
+                                false
+                            );
                             cost.md5ext = cost.md5;
                             // NOTE 2: in preloaded data there is no md5, only md5ext
                             delete cost.md5;
