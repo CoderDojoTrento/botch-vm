@@ -64,8 +64,11 @@ class BotchStorageHelper extends Helper {
 
         /**
          * In-memory storage for Botch assets
-         * @type {Object.<AssetType, AssetIdMap>} Maps asset type to a map of asset ID to actual assets.
-         * @typedef {Object.<string, BuiltinAssetRecord>} AssetIdMap - Maps asset ID to asset.
+         *
+         * Maps asset type to a map of asset ID to actual assets.
+         * @type {Object.<AssetType, AssetIdMap>}
+         * Maps asset ID to asset.
+         * @typedef {Object.<string, BuiltinAssetRecord>} AssetIdMap
          */
         this.assets = {};
 
@@ -179,7 +182,7 @@ class BotchStorageHelper extends Helper {
     /**
      * Returns a list with all the tags of the sprites
      *
-     * @returns {[]} list
+     * @returns {object[]} list
      * @since botch 0.1
      */
     getAllTags () {

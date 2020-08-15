@@ -80,7 +80,11 @@ class Scratch3Botch {
         log.log('Botch runtime:', runtime);
         log.log('Botch custom storageHelper:', this.storageHelper);
 
-        window.BOTCH = this;
+        if (window){
+            window.BOTCH = this; // browser
+        } else {
+            global.BOTCH = this; // node
+        }
 
         // show the organism when stopped
         this.runtime.on(Runtime.PROJECT_STOP_ALL, (() => {
