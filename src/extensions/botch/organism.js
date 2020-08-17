@@ -9,35 +9,8 @@ if (typeof TextEncoder === 'undefined') {
 const Vector2 = require('./vector2');
 const MathUtil = require('../../util/math-util');
 const svgen = require('./svg-generator');
-const {loadCostume} = require('../../import/load-costume.js');
 const Enemy = require('./enemy');
-
-/**
- * Create the new costume asset for the VM
- * @param {storage} storage storage
- * @param {assetType} assetType assetType
- * @param {dataFormay} dataFormat dataFormat
- * @param {data} data data
- * @returns {VMAsset} VMAsset
- * @since botch-0.1
- */
-const createVMAsset = function (storage, assetType, dataFormat, data) {
-    const asset = storage.createAsset(
-        assetType,
-        dataFormat,
-        data,
-        null,
-        true // generate md5
-    );
-
-    return {
-        name: null, // Needs to be set by caller
-        dataFormat: dataFormat,
-        asset: asset,
-        md5: `${asset.assetId}.${dataFormat}`,
-        assetId: asset.assetId
-    };
-};
+const BotchUtil = require('./botchUtil');
 
 /**
  * @since botch-0.1
@@ -70,25 +43,27 @@ class Organism {
         this.currEffectStep = this.effectStep;
         this.effectSign = 1;
 
+        this.botchUtil = new BotchUtil(this.runtime);
+
         this.dna = [];
 
         if (dna) {
             // Mutation
             this.dna[0] = dna[0];
             if (Math.random() < this.mr) {
-                this.dna[0] += this.rdn(-0.3, 0.3);
+                this.dna[0] += this.botchUtil.rdn(-0.3, 0.3);
             }
             this.dna[1] = dna[1];
             if (Math.random() < this.mr) {
-                this.dna[1] += this.rdn(-0.3, 0.3);
+                this.dna[1] += this.botchUtil.rdn(-0.3, 0.3);
             }
             this.dna[2] = dna[2];
             if (Math.random() < this.mr) {
-                this.dna[2] += this.rdn(-15, 15);
+                this.dna[2] += this.botchUtil.rdn(-15, 15);
             }
             this.dna[3] = dna[3];
             if (Math.random() < this.smr) {
-                this.dna[3] += this.rdn(-15, 15);
+                this.dna[3] += this.botchUtil.rdn(-15, 15);
             }
         } else {
             this.dna[0] = (Math.random() * 10) - 5; // food attraction
@@ -98,7 +73,7 @@ class Organism {
         }
 
         this.svg = new svgen(130, 130).generateMultiple(this.dna[0], this.dna[1], 5);
-        this.uploadCostumeEdit(this.svg, this.target.id);
+        this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
 
         // Variable assignment to the sprite
         // each clone has the its own dna saved and the dna of the non-clone target
@@ -109,76 +84,6 @@ class Organism {
             list.value.push(element);
         });
         list._monitorUpToDate = false;
-    }
-
-    // <LOAD COSTUMES METHODS>
-
-    /**
-     * COPIED AND ADAPTED FROM virtual-machine.js
-     * Add a costume to the current editing target.
-     * @param {string} md5ext - the MD5 and extension of the costume to be loaded.
-     * @param {!object} costumeObject Object representing the costume.
-     * @param {string} optTargetId - the id of the target to add to, if not the editing target.
-     * @param {string} optVersion - if this is 2, load costume as sb2, otherwise load costume as sb3.
-     * @returns {?Promise} - a promise that resolves when the costume has been added
-     * @since botch-0.1
-     */
-    addCostume (md5ext, costumeObject, optTargetId, optVersion) {
-        const target = optTargetId ? this.runtime.getTargetById(optTargetId) :
-            this.runtime.getEditingTarget();
-        if (target) {
-            return loadCostume(md5ext, costumeObject, this.runtime, optVersion).then(() => {
-                target.addCostume(costumeObject);
-                target.setCostume(
-                    target.getCostumes().length - 1
-                );
-                this.runtime.emitProjectChanged();
-            });
-        }
-        // If the target cannot be found by id, return a rejected promise
-        return Promise.reject();
-    }
-
-    handleNewCostume (costume, id) {
-        const costumes = Array.isArray(costume) ? costume : [costume];
-        return Promise.all(costumes.map(c => this.addCostume(c.md5, c, id)));
-    }
-
-    handleCostume (vmCostumes, id) {
-        vmCostumes.forEach((costume, i) => {
-            costume.name = `${i}${i ? i + 1 : ''}`;
-        });
-        this.handleNewCostume(vmCostumes, id); // Tolto .then(
-    }
-
-    addCostumeFromBuffer (dataBuffer, id) {
-        const costumeFormat_ = this.storage.DataFormat.SVG;
-        const assetType_ = this.storage.AssetType.ImageVector;
-        const storage_ = this.storage;
-        const vmCostume = createVMAsset(
-            storage_,
-            assetType_,
-            costumeFormat_,
-            dataBuffer
-        );
-        this.handleCostume([vmCostume], id);
-    }
-
-    /**
-     * Assign a new costume (SVG) to the selected target (id)
-     * @param {string} fileData string of the svg
-     * @param {string?} id id of the target
-     * @since botch-0.1
-     */
-    uploadCostumeEdit (fileData, id) {
-        this.addCostumeFromBuffer(new Uint8Array((new _TextEncoder()).encode(fileData)), id);
-    }
-
-    // </LOAD COSTUMES METHODS>
-
-
-    rdn (min, max) {
-        return (Math.random() * (max - min)) + min;
     }
 
     /**
@@ -196,24 +101,6 @@ class Organism {
         this.position.y = parseFloat(this.target.y);
         this.mass = parseFloat(mass_);
         this.maxForce = parseFloat(maxForce_);
-    }
-
-    /**
-     * Create a clone of a given target
-     * @since botch-0.1
-     */
-    createClone () {
-        // Set clone target
-        const cloneTarget = this.target;
-
-        // If clone target is not found, return
-        if (!cloneTarget) return;
-
-        // Create clone
-        this.target = cloneTarget.makeClone();
-        
-        // Reset the target effect
-        this.target.clearEffect();
     }
 
     /**
@@ -235,6 +122,82 @@ class Organism {
     }
 
     /**
+     * Behave with food and enemies
+     * ApplyForce is called here and not in seek
+     * @param {Map} good food map or some sprites that rise the health
+     * @param {Map} bad some sprites that low the health
+     * @since botch-0.2
+     */
+    behaviourEnemy (good, bad) {
+        const steerG = this.eat(good, 0.2, this.dna[2]);
+        const steerB = this.eatEnemy(bad, -0.5, this.dna[3]);
+
+        steerG.mult(this.dna[0]);
+        steerB.mult(this.dna[1]);
+
+        this.applyForce(steerG);
+        this.applyForce(steerB);
+    }
+
+    /**
+     * Eat the list passed and set the health of the organism
+     * according to the nutrition
+     * If the list passed is an enemy it will be treated differently
+     * @param {RenderedTarget} agent the foodTarget or poisonTarget
+     * @param {number} nutrition value for health
+     * @param {number} perception distance to see object
+     * @returns {Vector2} steer force
+     * @since botch-0.2
+     */
+    eat (agent, nutrition, perception) {
+        let record = Infinity;
+        let closest = null;
+        const stageW = this.target.runtime.constructor.STAGE_WIDTH;
+        const stageH = this.target.runtime.constructor.STAGE_HEIGHT;
+        let esc = 30;
+
+        // get all the clones
+        const all = agent.sprite.clones;
+
+        all.forEach(element => {
+            let en = false;
+            if (element instanceof Enemy) {
+                element = element.target;
+                en = true;
+                esc = 10;
+            }
+
+            const d = new Vector2(element.x, element.y).dist(new Vector2(this.target.x, this.target.y));
+
+            // If is close to food (eat) change the position if is original
+            // otherwise delete the clone
+            // Easier
+            if (d < esc) { // (this.isTouchingObject(f)) { // there is no isTouchingSprite() with a specific ID
+                if (en) {
+                    this.health -= 0.1;
+                } else {
+                    this.health += nutrition;
+                    if (element.isOriginal) {
+                        element.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
+                    } else {
+                        this.target.runtime.disposeTarget(element);
+                        this.target.runtime.stopForTarget(element);
+                    }
+                }
+            } else if (d < record && d < perception) {
+                record = d;
+                closest = element;
+            }
+        });
+
+        if (closest) {
+            return this.seek(closest.x, closest.y);
+        }
+
+        return new Vector2(0, 0);
+    }
+
+    /**
      * Eat the list passed and set the health of the organism
      * according to the nutrition
      * If the list passed is an enemy it will be treated differently
@@ -244,13 +207,13 @@ class Organism {
      * @returns {Vector2} steer force
      * @since botch-0.2
      */
-    eat (list, nutrition, perception) {
+    eatEnemy (list, nutrition, perception) {
         let record = Infinity;
         let closest = null;
         const stageW = this.target.runtime.constructor.STAGE_WIDTH;
         const stageH = this.target.runtime.constructor.STAGE_HEIGHT;
         let esc = 30;
-
+        
         for (let f of list.values()) {
             let en = false;
             if (f instanceof Enemy) {
@@ -429,71 +392,13 @@ class Organism {
     }
 
     /**
-     * Method copied from scratch_look.js
-     * Limit for ghost effect
-     * @const {object}
-     * @since botch-0.2
-     */
-    static get EFFECT_GHOST_LIMIT (){
-        return {min: 0, max: 100};
-    }
-
-    /**
-     * Method copied from scratch_look.js
-     * Limit for brightness effect
-     * @const {object}
-     * @since botch-0.2
-     */
-    static get EFFECT_BRIGHTNESS_LIMIT (){
-        return {min: -100, max: 100};
-    }
-
-    /**
-     * Method copied from scratch_look.js
-     * @param {string} effect effect
-     * @param {number} value value
-     * @return {number} new value
-     * @since botch-0.2
-     */
-    clampEffect (effect, value) {
-        let clampedValue = value;
-        switch (effect) {
-        case 'ghost':
-            clampedValue = MathUtil.clamp(value,
-                Organism.EFFECT_GHOST_LIMIT.min,
-                Organism.EFFECT_GHOST_LIMIT.max);
-            break;
-        case 'brightness':
-            clampedValue = MathUtil.clamp(value,
-                Organism.EFFECT_BRIGHTNESS_LIMIT.min,
-                Organism.EFFECT_BRIGHTNESS_LIMIT.max);
-            break;
-        }
-        return clampedValue;
-    }
-
-    /**
-     * Change the effect of the target
-     * @param {string} effect_ scratch effect
-     * @param {number} value scratch effect value
-     * @since botch-0.2
-     */
-    changeGraphicsEffect (effect_, value) {
-        const effect = effect_.toLowerCase();
-        if (!this.target.effects.hasOwnProperty(effect)) return;
-        let newValue = value + this.target.effects[effect];
-        newValue = this.clampEffect(effect, newValue);
-        this.target.setEffect(effect, newValue);
-    }
-
-    /**
      * Mimic the "breath effect" with fisheye
      * @since botch-0.2
      */
     breathe () {
         if (this.currEffectStep > 0) {
             const change = 5 * this.effectSign;
-            this.changeGraphicsEffect('fisheye', change);
+            this.botchUtil.changeGraphicsEffect(this.target, 'fisheye', change);
             this.currEffectStep--;
         } else {
             this.currEffectStep = this.effectStep;
@@ -515,12 +420,12 @@ class Organism {
             if (timeElapsed < util.stackFrame.duration * 500) {
                 const frac = timeElapsed / (util.stackFrame.duration * 500);
                 const dx = frac * (util.stackFrame.end - util.stackFrame.start);
-                this.changeGraphicsEffect('ghost', util.stackFrame.start + dx);
+                this.botchUtil.changeGraphicsEffect(this.target, 'ghost', util.stackFrame.start + dx);
                 this.runtime.emit('SAY', this.target, 'say', message);
                 util.yield();
             } else {
                 this.runtime.emit('SAY', this.target, 'say', message);
-                this.changeGraphicsEffect('ghost', util.stackFrame.end);
+                this.botchUtil.changeGraphicsEffect(this.target, 'ghost', util.stackFrame.end);
                 return true;
             }
         } else {
@@ -532,7 +437,7 @@ class Organism {
             util.stackFrame.end = 100;
             this.runtime.emit('SAY', this.target, 'say', message);
             if (util.stackFrame.duration <= 0) {
-                this.changeGraphicsEffect('ghost', util.stackFrame.end);
+                this.botchUtil.changeGraphicsEffect(this.target, 'ghost', util.stackFrame.end);
                 return true;
             }
             util.yield();

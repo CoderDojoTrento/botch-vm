@@ -13,41 +13,12 @@ const BlockType = require('../../extension-support/block-type');
 const Cast = require('../../util/cast');
 const Organism = require('./organism');
 const svgen = require('./svg-generator');
-const {loadCostume} = require('../../import/load-costume.js');
 const BotchStorageHelper = require('./botch-storage-helper.js');
-
+const BotchUtil = require('./botchUtil');
 const Enemy = require('./enemy');
 const DEFAULT_BOTCH_SPRITES = require('./default-botch-sprites.js');
 const log = require('../../util/log');
 const md5 = require('js-md5');
-
-/**
- * Create the new costume asset for the VM
- * @param {storage} storage storage
- * @param {assetType} assetType assetType
- * @param {dataFormay} dataFormat dataFormat
- * @param {data} data data
- * @returns {VMAsset} VMAsset
- * @since botch-0.1
- */
-const createVMAsset = function (storage, assetType, dataFormat, data) {
-    const asset = storage.createAsset(
-        assetType,
-        dataFormat,
-        data,
-        null,
-        true // generate md5
-    );
-
-    return {
-        name: null, // Needs to be set by caller
-        dataFormat: dataFormat,
-        asset: asset,
-        md5: `${asset.assetId}.${dataFormat}`,
-        assetId: asset.assetId
-    };
-};
-
 class Scratch3Botch {
 
     static get BOTCH_STORAGE_HELPER_UPDATE (){
@@ -63,9 +34,12 @@ class Scratch3Botch {
         this.storage = this.runtime.storage;
         this.foodMap = new Map();
         this.poisonMap = new Map();
+        this.foodTarget = {};
+        this.poisonTarget = {};
         this.maxForce = 0.5;
         this.enemiesMaxForce = 0.3;
         this.mass = 1;
+        this.botchUtil = new BotchUtil(this.runtime);
         
         this.runtime.on(Runtime.PROJECT_LOADED, (() => {
             log.log('Botch: on PROJECT_LOADED');
@@ -90,72 +64,6 @@ class Scratch3Botch {
         }));
     }
 
-    // <LOAD COSTUMES METHODS>
-
-    /**
-     * COPIED AND ADAPTED FROM virtual-machine.js
-     * Add a costume to the current editing target.
-     * @param {string} md5ext - the MD5 and extension of the costume to be loaded.
-     * @param {!object} costumeObject Object representing the costume.
-     * @param {string} optTargetId - the id of the target to add to, if not the editing target.
-     * @param {string} optVersion - if this is 2, load costume as sb2, otherwise load costume as sb3.
-     * @returns {?Promise} - a promise that resolves when the costume has been added
-     * @since botch-0.1
-     */
-    addCostume (md5ext, costumeObject, optTargetId, optVersion) {
-        const target = optTargetId ? this.runtime.getTargetById(optTargetId) :
-            this.runtime.getEditingTarget();
-        if (target) {
-            return loadCostume(md5ext, costumeObject, this.runtime, optVersion).then(() => {
-                target.addCostume(costumeObject);
-                target.setCostume(
-                    target.getCostumes().length - 1
-                );
-                this.runtime.emitProjectChanged();
-            });
-        }
-        // If the target cannot be found by id, return a rejected promise
-        return Promise.reject();
-    }
-
-    handleNewCostume (costume, id) {
-        const costumes = Array.isArray(costume) ? costume : [costume];
-        return Promise.all(costumes.map(c => this.addCostume(c.md5, c, id)));
-    }
-
-    handleCostume (vmCostumes, id) {
-        vmCostumes.forEach((costume, i) => {
-            costume.name = `${i}${i ? i + 1 : ''}`;
-        });
-        this.handleNewCostume(vmCostumes, id); // Tolto .then(
-    }
-
-
-    addCostumeFromBuffer (dataBuffer, id) {
-        const costumeFormat_ = this.storage.DataFormat.SVG;
-        const assetType_ = this.storage.AssetType.ImageVector;
-        const storage_ = this.storage;
-        const vmCostume = createVMAsset(
-            storage_,
-            assetType_,
-            costumeFormat_,
-            dataBuffer
-        );
-        this.handleCostume([vmCostume], id);
-    }
-
-    /**
-     * Assign a new costume (SVG) to the selected target (id)
-     * @param {string} fileData string of the svg
-     * @param {string?} id id of the target
-     * @since botch-0.1
-     */
-    uploadCostumeEdit (fileData, id) {
-        this.addCostumeFromBuffer(new Uint8Array((new _TextEncoder()).encode(fileData)), id);
-    }
-
-    // </LOAD COSTUMES METHODS>
-
     getInfo () {
         return {
             id: 'botch',
@@ -165,6 +73,29 @@ class Scratch3Botch {
                     opcode: 'debugConsole',
                     blockType: BlockType.COMMAND,
                     text: 'console debug'
+                },
+                {
+                    opcode: 'setAs', // TODO define a tendina
+                    blockType: BlockType.COMMAND,
+                    text: 'set as [TYPE]',
+                    arguments: {
+                        TYPE: {
+                            type: ArgumentType.String,
+                            defaultValue: 'organism',
+                            menu: 'speciesMenu'
+                        }
+                    }
+                },
+                {
+                    opcode: 'generatePopulation', // TODO generate n child con tendina
+                    blockType: BlockType.COMMAND,
+                    text: 'generate [COPIES] children',
+                    arguments: {
+                        COPIES: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: 1
+                        }
+                    }
                 },
                 {
                     opcode: 'behaviors',
@@ -177,75 +108,24 @@ class Scratch3Botch {
                     text: 'behave with enemies'
                 },
                 {
-                    opcode: 'createPopulation',
-                    blockType: BlockType.COMMAND,
-                    text: 'create population of [COPIES] copies',
-                    arguments: {
-                        COPIES: {
-                            type: ArgumentType.NUMBER,
-                            defaultValue: 1
-                        }
-                    }
-                },
-                {
-                    opcode: 'defineFood',
-                    blockType: BlockType.COMMAND,
-                    text: 'generate max: [FOOD] food',
-                    arguments: {
-                        FOOD: {
-                            type: ArgumentType.NUMBER,
-                            defaultValue: 8
-                        }
-                    }
-                },
-                {
-                    opcode: 'definePoison',
-                    blockType: BlockType.COMMAND,
-                    text: 'generate max: [POISON] poison',
-                    arguments: {
-                        POISON: {
-                            type: ArgumentType.NUMBER,
-                            defaultValue: 2
-                        }
-                    }
-                },
-                {
-                    opcode: 'createFood',
-                    blockType: BlockType.COMMAND,
-                    text: 'add new food with [FREQUENCY] %',
-                    arguments: {
-                        FREQUENCY: {
-                            type: ArgumentType.NUMBER,
-                            defaultValue: 5
-                        }
-                    }
-                },
-                {
-                    opcode: 'createPoison',
-                    blockType: BlockType.COMMAND,
-                    text: 'add new poison with [FREQUENCY] %',
-                    arguments: {
-                        FREQUENCY: {
-                            type: ArgumentType.NUMBER,
-                            defaultValue: 2
-                        }
-                    }
-                },
-                {
-                    opcode: 'defineEnemies',
-                    blockType: BlockType.COMMAND,
-                    text: 'generate: [ENEMIES] enemies',
-                    arguments: {
-                        ENEMIES: {
-                            type: ArgumentType.NUMBER,
-                            defaultValue: 1
-                        }
-                    }
-                },
-                {
                     opcode: 'moveEnemies',
                     blockType: BlockType.COMMAND,
                     text: 'move enemies'
+                },
+                {
+                    opcode: 'removeOrganism',
+                    blockType: BlockType.COMMAND,
+                    text: 'remove organism'
+                },
+                {
+                    opcode: 'isDeadHat',
+                    blockType: BlockType.HAT,
+                    text: 'when an organism dies'
+                },
+                {
+                    opcode: 'isOrganismDead',
+                    blockType: BlockType.BOOLEAN,
+                    text: 'is organism dead?'
                 },
                 {
                     opcode: 'sayBest',
@@ -276,15 +156,24 @@ class Scratch3Botch {
                 {
                     opcode: 'poisonDist',
                     blockType: BlockType.REPORTER,
-                    text: 'posion dist. best:'
+                    text: 'poison dist. best:'
                 },
                 {
                     opcode: 'health',
                     blockType: BlockType.REPORTER,
                     text: 'health best:'
+                },
+                {
+                    opcode: 'living',
+                    blockType: BlockType.REPORTER,
+                    text: 'life span:'
                 }
             ],
             menus: {
+                speciesMenu: {
+                    acceptReporters: true,
+                    items: ['organism', 'food', 'poison', 'enemy']
+                },
                 getSprite: {
                     acceptReporters: true,
                     items: 'getSpriteMenu'
@@ -306,20 +195,250 @@ class Scratch3Botch {
     }
 
     /**
+     * Check if the organismMap or the enemiesMap are already defined
+     * and if true, reinitialize it
+     * @param {string} id target id
+     * @since botch-0.2
+     */
+    checkMap (id) {
+        if (this.organismMap.size > 0 &&
+            this.organismMap.entries().next().value[0] === id) {
+            this.organismMap = new Map();
+        }
+        if (this.enemiesMap.size > 0 &&
+            this.enemiesMap.entries().next().value[0] === id) {
+            this.enemiesMap = new Map();
+        }
+    }
+
+    /**
+     * Check if the foodTarget or poisonTarget are already defined
+     * and if true, reinitialize it
+     * @param {string} id target id
+     * @since botch-0.2
+     */
+    checkTarget (id) {
+        if (this.foodTarget.id === id) {
+            this.foodTarget = {};
+        }
+        if (this.poisonTarget === id) {
+            this.poisonTarget = {};
+        }
+    }
+    
+    /**
+     * Delete all the "non original" costumes of a sprite
+     * starting with org_
+     * @param {target} target target
+     * @since botch-0.2
+     */
+    deleteAllCostumes (target) {
+        const costumeNum = target.sprite.costumes.length;
+        for (let i = costumeNum - 1; i >= 1; i--) {
+            if (target.sprite.costumes[i].name.startsWith('org_')) {
+                target.deleteCostume(i);
+            }
+        }
+    }
+
+    /**
+     * Define a sprite as one of the available species
+     * @param {args} args args
+     * @param {util} util util
+     * @since botch-0.2
+     */
+    setAs (args, util) {
+        if (args.TYPE === 'organism') {
+            this.botchUtil.deleteClones(util.target.id);
+            this.botchUtil.deleteAllOrgCostumes(util.target);
+            // check if it is already assigned somewhere
+            if (this.enemiesMap.size > 0 &&
+                util.target.id === this.enemiesMap.entries().next().value[0]) {
+                this.enemiesMap = new Map();
+            }
+            this.checkTarget(util.target.id);
+
+            util.target.goToFront();
+            this.organismMap = new Map();
+
+            const org = new Organism(
+                util.target, this.mass, this.maxForce);
+
+            // change the costume of the original sprite
+            const newSvg = new svgen(130, 130).generateMultiple(org.dna[0], org.dna[1], 5);
+            org.svg = newSvg;
+
+            this.organismMap.set(util.target.id, org);
+
+            util.target.setVisible(true);
+            // this.uploadCostumeEdit(newSvg, util.target.id); // for now it will not assign a costume to the original
+        }
+        if (args.TYPE === 'food') {
+            this.botchUtil.deleteClones(util.target.id);
+            // check if it is already assigned somewhere
+            if (this.poisonTarget.id === util.target.id) {
+                this.poisonTarget = {};
+            }
+            this.checkMap(util.target.id);
+
+            util.target.setVisible(true);
+            this.foodTarget = util.target;
+        }
+        if (args.TYPE === 'poison') {
+            this.botchUtil.deleteClones(util.target.id);
+            // check if it is already assigned somewhere
+            if (this.foodTarget.id === util.target.id) {
+                this.foodTarget = {};
+            }
+            this.checkMap(util.target.id);
+
+            util.target.setVisible(true);
+            this.poisonTarget = util.target;
+        }
+        if (args.TYPE === 'enemy') {
+            this.botchUtil.deleteClones(util.target.id);
+            // check if it is already assigned somewhere
+            if (this.organismMap.size > 0 &&
+                util.target.id === this.organismMap.entries().next().value[0]) {
+                this.organismMap = new Map();
+            }
+            this.checkTarget(util.target.id);
+
+            util.target.goToFront();
+            this.enemiesMap = new Map();
+            util.target.setVisible(true);
+            const enemy = new Enemy(
+                util.target, this.mass, this.enemiesMaxForce);
+
+            this.enemiesMap.set(util.target.id, enemy);
+        }
+    }
+
+    /**
+     * Generate an organism with clones, the first clone will assign the same costume
+     * to the original target for the preview icon
+     * @param {target} target target
+     * @param {number} i index
+     * @since botch-0.2
+     */
+    createOrganismClone (target, i) {
+        const newClone = this.botchUtil.createClone(target);
+        if (newClone) {
+            newClone.setVisible(true);
+            this.runtime.addTarget(newClone);
+
+            const org = new Organism(newClone, this.mass, this.maxForce);
+            this.organismMap.set(newClone.id, org);
+            
+            // Place behind the original target.
+            newClone.goBehindOther(target);
+            // Set a random size
+            newClone.setSize((Math.random() * 100) + 30);
+            if (i === 0) { // the first clone is placed where is the original
+                newClone.setXY(target.x, target.y);
+                target.setCostume(org.target.currentCostume); // don't know why this does not work!
+            } else {
+            // place the new clone in a random position
+                const stageW = this.runtime.constructor.STAGE_WIDTH;
+                const stageH = this.runtime.constructor.STAGE_HEIGHT;
+                newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
+            }
+        }
+    }
+
+    /**
+     * Generate an enemy with clones
+     * @param {target} target target
+     * @since botch-0.2
+     */
+    createEnemyClone (target) {
+        const newClone = this.botchUtil.createClone(target);
+        if (newClone) {
+            newClone.setVisible(true);
+            this.runtime.addTarget(newClone);
+
+            // Place behind the original target.
+            newClone.goBehindOther(target);
+
+            // place the new clone in a random position
+            const stageW = this.runtime.constructor.STAGE_WIDTH;
+            const stageH = this.runtime.constructor.STAGE_HEIGHT;
+            newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
+
+            const en = new Enemy(newClone, this.mass, this.maxForce);
+
+            this.enemiesMap.set(newClone.id, en);
+        }
+    }
+
+    /**
+     * Generate n children of Organism or Enemy
+     * @param {args} args args
+     * @param {util} util util
+     * @returns {string} message
+     * @since botch-0.1
+     */
+    generatePopulation (args, util) {
+        if (this.organismMap.size > 0 &&
+            this.organismMap.get(util.target.id)) { // util.target.id === this.organismMap.entries().next().value[0]
+            util.target.setVisible(false); // hide the original
+            const copies = Cast.toNumber(args.COPIES);
+            if (this.organismMap.size === 1) {
+                if (copies === 0) {
+                    this.createOrganismClone(util.target, copies);
+                } else if (copies <= 30) {
+                    for (let i = 0; i <= copies; i++) {
+                        this.createOrganismClone(util.target, i);
+                    }
+                }
+            } else {
+                for (let i = 1; i <= copies; i++) {
+                    this.createOrganismClone(util.target, i);
+                }
+            }
+        } else if (this.enemiesMap.size > 0 &&
+            util.target.id === this.enemiesMap.entries().next().value[0]) {
+            const copies = Cast.toNumber(args.COPIES);
+            if (copies > 0 && copies <= 30) {
+                for (let i = 0; i < copies; i++) {
+                    this.createEnemyClone(util.target);
+                }
+            }
+        } else {
+            return 'There is no organism or enemy definition';
+        }
+    }
+
+    /**
      * Only move the organism randomly
+     * @param {RenderedTarget} target target
      * @param {string} message message to say
      * @since botch-0.2
      */
-    confusion (message) {
-        for (const org of this.organismMap.values()) {
-            if (!org.target.isOriginal) { // Only the clones are managed
-                org.boundaries(
-                    this.runtime.constructor.STAGE_WIDTH,
-                    this.runtime.constructor.STAGE_HEIGHT);
-                org.refreshArgs(this.mass, this.maxForce);
-                org.update();
-                this.runtime.emit('SAY', org.target, 'say', message);
-            }
+    confusion (target, message) {
+        const org = this.organismMap.get(target.id);
+        if (!org.target.isOriginal) { // Only the clones are managed
+            org.boundaries(
+                this.runtime.constructor.STAGE_WIDTH,
+                this.runtime.constructor.STAGE_HEIGHT);
+            org.refreshArgs(this.mass, this.maxForce);
+            org.update();
+            this.runtime.emit('SAY', org.target, 'say', message);
+        }
+    }
+
+    /**
+     * Create a food in x, y
+     * @param {number} x x coordinate
+     * @param {number} y y coordinate
+     * @since botch-0.1
+     */
+    createFoodXY (x, y) {
+        const newClone = this.botchUtil.createClone(this.foodTarget);
+        if (newClone) {
+            this.runtime.addTarget(newClone);
+            newClone.setXY(x, y);
+            newClone.goBehindOther(this.foodTarget);
         }
     }
 
@@ -338,10 +457,18 @@ class Scratch3Botch {
      * @since botch-0.1
      */
     behaviors (args, util) {
-        if (this.poisonMap.size < 1 && this.foodMap.size < 1) {
-            this.confusion('I need food');
-            return 'I need food or poison';
+        if (this.poisonTarget === {}) {
+            this.confusion(util.target, '?');
+            return 'I need poison';
         }
+        if (this.foodTarget === {}) {
+            this.confusion(util.target, '?');
+            return 'I need food';
+        }
+
+        // Now I don't have control of this part of code
+        // this because the event is fired only when it start as a clone
+        // an when all the organism die there is no clones
         if (this.organismMap.size <= 1) {
             util.target.setVisible(true);
             this.runtime.stopAll();
@@ -354,12 +481,13 @@ class Scratch3Botch {
                     this.runtime.constructor.STAGE_WIDTH,
                     this.runtime.constructor.STAGE_HEIGHT);
                 org.refreshArgs(this.mass, this.maxForce);
-                org.behaviors(this.foodMap, this.poisonMap);
+                // org.behaviors(this.foodMap, this.poisonMap);
+                org.behaviors(this.foodTarget, this.poisonTarget);
                 org.update();
 
                 const newOrg = org.clone();
                 if (newOrg !== null) {
-                    const newClone = this.createClone(org.target);
+                    const newClone = this.botchUtil.createClone(org.target);
                     if (newClone) {
                         this.runtime.addTarget(newClone);
                         newClone.clearEffects();
@@ -368,17 +496,19 @@ class Scratch3Botch {
                     this.organismMap.set(newClone.id, newOrg);
                 }
             }
-
             if (org.dead()) {
+                this.runtime.startHats('isDeadHat', null, org.target.sprite);
+            }
+            /* if (org.dead()) {
                 if (org.deathAnimation(util)) { // wait the end of animation
-                    this.runtime.disposeTarget(org.target);
-                    this.runtime.stopForTarget(org.target);
-                    this.organismMap.delete(org.target.id);
+                    // this.runtime.disposeTarget(org.target);
+                    // this.runtime.stopForTarget(org.target);
+                    // this.organismMap.delete(org.target.id);
 
                     // when an organism die, it will drop a food
-                    this.createFoodXY(org.target.x, org.target.y);
+                    // this.createFoodXY(org.target.x, org.target.y);
                 }
-            }
+            } */
         }
     }
 
@@ -391,9 +521,9 @@ class Scratch3Botch {
      * @since botch-0.2
      */
     behaveEnemies (args, util) {
-        if (this.poisonMap.size < 1 && this.foodMap.size < 1) {
-            this.confusion('I need food');
-            return 'I need food or enemies';
+        if (this.foodTarget === {}) {
+            this.confusion(util.target, '?');
+            return 'I need food';
         }
 
         if (this.organismMap.size <= 1) {
@@ -408,12 +538,12 @@ class Scratch3Botch {
                     this.runtime.constructor.STAGE_WIDTH,
                     this.runtime.constructor.STAGE_HEIGHT);
                 org.refreshArgs(this.mass, this.maxForce);
-                org.behaviors(this.foodMap, this.enemiesMap);
+                org.behaviourEnemy(this.foodTarget, this.enemiesMap);
                 org.update();
 
                 const newOrg = org.clone();
                 if (newOrg !== null) {
-                    const newClone = this.createClone(org.target);
+                    const newClone = this.botchUtil.createClone(org.target);
                     if (newClone) {
                         this.runtime.addTarget(newClone);
                         newClone.clearEffects();
@@ -424,267 +554,53 @@ class Scratch3Botch {
             }
 
             if (org.dead()) {
+                this.runtime.startHats('isDeadHat', null, org.target.sprite);
+            }
+            /* if (org.dead()) {
                 if (org.deathAnimation(util)) { // wait the end of animation
+                    // this.runtime.disposeTarget(org.target);
+                    // this.runtime.stopForTarget(org.target);
+                    // this.organismMap.delete(org.target.id);
+
+                    // when an organism die, it will drop a food
+                    // this.createFoodXY(org.target.x, org.target.y);
+                }
+            } */
+        }
+    }
+
+    /**
+     * Return true if an organism id dead
+     * @param {args} args args
+     * @param {util} util util
+     * @returns {boolean} true if dead
+     * @since botch-0.2
+     */
+    isOrganismDead (args, util) {
+        if (this.organismMap.size > 0) {
+            const org = this.organismMap.get(util.target.id);
+            if (org) {
+                return (org.dead());
+            }
+        }
+    }
+
+    isDeadHat () {
+        return true;
+    }
+
+    removeOrganism (args, util) {
+        if (this.organismMap.size > 1) {
+            const org = this.organismMap.get(util.target.id);
+            if (org.deathAnimation(util)) {
+                if (org) {
                     this.runtime.disposeTarget(org.target);
                     this.runtime.stopForTarget(org.target);
                     this.organismMap.delete(org.target.id);
-
-                    // when an organism die, it will drop a food
-                    this.createFoodXY(org.target.x, org.target.y);
                 }
             }
         }
     }
-
-    /**
-     * Create the population of organism
-     * @param {args} args args
-     * @param {util} util util
-     * @since botch-0.1
-     */
-    createPopulation (args, util) {
-        this.storage = this.runtime.storage; // add this for auto loading the extension
-        this.deleteClones(util.target.id);
-        util.target.goToFront();
-        this.organismMap = new Map();
-
-        let org = new Organism(
-            util.target, this.mass, this.maxForce);
-
-        // change the costume of the original sprite
-        const newSvg = new svgen(130, 130).generateMultiple(org.dna[0], org.dna[1], 5);
-
-        org.svg = newSvg;
-
-        this.organismMap.set(util.target.id, org);
-
-        this.uploadCostumeEdit(newSvg, util.target.id);
-
-        util.target.setVisible(false); // hide the original
-
-        const copies = Cast.toString(args.COPIES);
-        if (copies > 0 && copies <= 30) {
-            for (let i = 0; i < copies; i++) {
-                // Create clone
-                const newClone = this.createClone(util.target);
-                if (newClone) {
-                    newClone.setVisible(true);
-                    this.runtime.addTarget(newClone);
-
-                    // Place behind the original target.
-                    newClone.goBehindOther(util.target);
-                    // Set a random size
-                    newClone.setSize((Math.random() * 100) + 30);
-
-                    // place the new clone in a random position
-                    const stageW = this.runtime.constructor.STAGE_WIDTH;
-                    const stageH = this.runtime.constructor.STAGE_HEIGHT;
-                    newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
-
-                    org = new Organism(newClone, this.mass, this.maxForce);
-
-                    this.organismMap.set(newClone.id, org);
-                }
-            }
-        }
-    }
-
-    /**
-     * Delete all the clones of a target
-     * @param {string} id id of the target (not a clone)
-     * @since botch-0.1
-     */
-    deleteClones (id) {
-        const clones = this.getClones(id);
-        clones.forEach(c => {
-            this.runtime.disposeTarget(c);
-            this.runtime.stopForTarget(c);
-        });
-    }
-
-    /**
-     * Get all the clones (only) of the selected target (not a clone)
-     * @param {string} id id of the target
-     * @returns {clones[]} list of clones
-     * @since botch-0.1
-     */
-    getClones (id) {
-        // Select all the clone of the sprite
-        return this.runtime.targets.filter(
-            t => !t.isOriginal && !t.isStage && t.sprite.clones[0].id === id
-        );
-    }
-
-    /**
-     * Create a clone of a given target
-     * @param {target} target target
-     * @returns {clone} new clone
-     * @since botch-0.1
-     */
-    createClone (target) {
-        // Set clone target
-        const cloneTarget = target;
-
-        // If clone target is not found, return
-        if (!cloneTarget) return;
-
-        // Create clone
-        return cloneTarget.makeClone();
-    }
-
-    /**
-     * Create clones of the selected sprite as "food"
-     * @param {*} args args
-     * @param {*} util util
-     * @since botch-0.1
-     */
-    defineFood (args, util) {
-        this.deleteClones(util.target.id);
-        this.foodMap = new Map();
-        this.foodMap.set(util.target.id, util.target);
-
-        const foodN = (Math.random() * (args.FOOD - 1));
-        for (let i = 0; i < foodN; i++) {
-            // Create clone
-            const newClone = this.createClone(util.target);
-            if (newClone) {
-                this.runtime.addTarget(newClone);
-
-                // Place behind the original target.
-                newClone.goBehindOther(util.target);
-
-                const stageW = this.runtime.constructor.STAGE_WIDTH;
-                const stageH = this.runtime.constructor.STAGE_HEIGHT;
-                // Move in a random position and avoid that anyone is touching the other
-                let maxIt = 20; // Max 20 try to find a place where is not touch other clones
-                while (newClone.isTouchingSprite(util.target.sprite.name) && maxIt > 0) {
-                    newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
-                    maxIt--;
-                }
-                this.foodMap.set(newClone.id, newClone);
-            }
-        }
-    }
-
-    /**
-     * Create clones of the selected sprite as "poison"
-     * @param {*} args args
-     * @param {*} util util
-     * @since botch-0.1
-     */
-    definePoison (args, util) {
-        this.deleteClones(util.target.id);
-        this.poisonMap = new Map();
-        this.poisonMap.set(util.target.id, util.target);
-
-        const poiN = (Math.random() * (args.POISON - 1));
-        for (let i = 0; i < poiN; i++) {
-            // Create clone
-            const newClone = this.createClone(util.target);
-            if (newClone) {
-                this.runtime.addTarget(newClone);
-
-                // Place behind the original target.
-                newClone.goBehindOther(util.target);
-
-                const stageW = this.runtime.constructor.STAGE_WIDTH;
-                const stageH = this.runtime.constructor.STAGE_HEIGHT;
-                // Move in a random position and avoid that anyone is touching the other
-                let maxIt = 20; // Max 20 try to find a place where is not touch other clones
-                while (newClone.isTouchingSprite(util.target.sprite.name) && maxIt > 0) {
-                    newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
-                    maxIt--;
-                }
-                this.poisonMap.set(newClone.id, newClone);
-            }
-        }
-    }
-
-    /**
-     * Create a food in x, y
-     * @param {number} x x coordinate
-     * @param {number} y y coordinate
-     * @since botch-0.1
-     */
-    createFoodXY (x, y) {
-        const first = this.foodMap.values().next().value;
-        const newClone = this.createClone(first);
-        if (newClone) {
-            newClone.setXY(x, y);
-            this.runtime.addTarget(newClone);
-            newClone.goBehindOther(first);
-            this.foodMap.set(newClone.id, newClone);
-        }
-    }
-
-    /**
-     * Create random food in the stage
-     * @param {args} args args
-     * @param {util} util util
-     * @returns {string} message
-     * @since botch-0.1
-     */
-    createFood (args, util) {
-        if (this.foodMap.size < 1) {
-            return 'I need a definition';
-        }
-        const fr = parseFloat(args.FREQUENCY) / 100;
-        if (args.FREQUENCY !== 0 && (Math.random() < fr)) {
-            const newClone = this.createClone(util.target);
-            if (newClone) {
-                this.runtime.addTarget(newClone);
-
-                // Place behind the original target.
-                newClone.goBehindOther(util.target);
-
-                const stageW = this.runtime.constructor.STAGE_WIDTH;
-                const stageH = this.runtime.constructor.STAGE_HEIGHT;
-                // Move in a random position and avoid that anyone is touching the other
-                let maxIt = 20; // Max 20 try to find a place where is not touch other clones
-                while (newClone.isTouchingSprite(util.target.sprite.name) && maxIt > 0) {
-                    newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
-                    maxIt--;
-                }
-                this.foodMap.set(newClone.id, newClone);
-            }
-        }
-
-    }
-
-    /**
-     * Create random poison in the stage
-     * @param {args} args args
-     * @param {util} util util
-     * @returns {string} message
-     * @since botch-0.1
-     */
-    createPoison (args, util) {
-        if (this.foodMap.size < 1) {
-            return 'I need a definition';
-        }
-        const fr = parseFloat(args.FREQUENCY) / 100;
-        if (args.FREQUENCY !== 0 && (Math.random() < fr)) {
-            const newClone = this.createClone(util.target);
-            if (newClone) {
-                this.runtime.addTarget(newClone);
-
-                // Place behind the original target.
-                newClone.goBehindOther(util.target);
-
-                const stageW = this.runtime.constructor.STAGE_WIDTH;
-                const stageH = this.runtime.constructor.STAGE_HEIGHT;
-                // Move in a random position and avoid that anyone is touching the other
-                let maxIt = 20; // Max 20 try to find a place where is not touch other clones
-                while (newClone.isTouchingSprite(util.target.sprite.name) && maxIt > 0) {
-                    newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
-                    maxIt--;
-                }
-                this.poisonMap.set(newClone.id, newClone);
-            }
-        }
-
-    }
-
 
     /**  Copied from virtual-machine.js
      * @param {object} fileDescs serialized jsons
@@ -938,56 +854,18 @@ class Scratch3Botch {
     }
 
     /**
-     * Define the enemies for the scratch environment
+     * Update the enemies position and behave with the environment
      * @param {args} args args
      * @param {util} util util
-     * @since botch-0.2
-     */
-    defineEnemies (args, util) {
-        this.deleteClones(util.target.id);
-        util.target.goToFront();
-        this.enemiesMap = new Map();
-
-        let enemy = new Enemy(
-            util.target, this.mass, this.enemiesMaxForce);
-
-        this.enemiesMap.set(util.target.id, enemy);
-
-        const copies = Cast.toString(args.ENEMIES);
-        if (copies > 0 && copies <= 30) {
-            for (let i = 0; i < copies; i++) {
-                // Create clone
-                const newClone = this.createClone(util.target);
-                if (newClone) {
-                    this.runtime.addTarget(newClone);
-
-                    // Place behind the original target.
-                    newClone.goBehindOther(util.target);
-
-                    // place the new clone in a random position
-                    const stageW = this.runtime.constructor.STAGE_WIDTH;
-                    const stageH = this.runtime.constructor.STAGE_HEIGHT;
-                    newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
-
-                    enemy = new Enemy(newClone, this.mass, this.enemiesMaxForce);
-
-                    this.enemiesMap.set(newClone.id, enemy);
-                }
-            }
-        }
-    }
-
-    /**
-     * Update the enemies position and behave with the environment
      * @returns {string} error message
      * @since botch-0.2
      */
-    moveEnemies () {
+    moveEnemies (args, util) {
         if (this.organismMap.size < 1) {
             return 'There is no organism';
         }
-
-        for (const enemy of this.enemiesMap.values()) {
+        const enemy = this.enemiesMap.get(util.target.id);
+        if (enemy) {
             enemy.boundaries(
                 this.runtime.constructor.STAGE_WIDTH - 150,
                 this.runtime.constructor.STAGE_HEIGHT - 150);
@@ -1084,6 +962,22 @@ class Scratch3Botch {
             }
         }
         return best;
+    }
+
+    /**
+     * Return the life span of an organism
+     * @param {args} args args
+     * @param {util} util util
+     * @returns {number} living parameter
+     * @since botch-0.2
+     */
+    living (args, util) {
+        if (this.organismMap.size > 0) {
+            const org = this.organismMap.get(util.target.id);
+            if (org) {
+                return org.living;
+            }
+        }
     }
 
     /**
