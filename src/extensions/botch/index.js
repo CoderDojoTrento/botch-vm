@@ -71,8 +71,13 @@ class Scratch3Botch {
             log.log('Botch: on PROJECT_LOADED');
             this.storage = this.runtime.storage;
             if (!this.storageHelper){
-                this.storageHelper = new BotchStorageHelper(this.runtime.storage);
-                this.storage.addHelper(this.storageHelper);
+                if (this.runtime.storage){ // in some tests it is not defined ...
+                    this.storageHelper = new BotchStorageHelper(this.runtime.storage);
+                    this.storage.addHelper(this.storageHelper);
+                } else {
+                    log.log('this.runtime.storage is not defined, skipping BotchStorageHelper initialization');
+                }
+
             }
             // this.testStoreSprite();
         }));
@@ -80,7 +85,8 @@ class Scratch3Botch {
         log.log('Botch runtime:', runtime);
         log.log('Botch custom storageHelper:', this.storageHelper);
 
-        if (window){
+        // browser detection arcana https://stackoverflow.com/a/41863502
+        if (this.window === this){
             window.BOTCH = this; // browser
         } else {
             global.BOTCH = this; // node
