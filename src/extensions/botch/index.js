@@ -63,7 +63,7 @@ class Scratch3Botch {
             }
         }));
     }
-
+    
     getInfo () {
         return {
             id: 'botch',
@@ -497,7 +497,7 @@ class Scratch3Botch {
                 }
             }
             if (org.dead()) {
-                this.runtime.startHats('isDeadHat', null, org.target.sprite);
+                this.runtime.startHats('botch_isDeadHat', null, org.target.sprite);
             }
             /* if (org.dead()) {
                 if (org.deathAnimation(util)) { // wait the end of animation
@@ -554,7 +554,7 @@ class Scratch3Botch {
             }
 
             if (org.dead()) {
-                this.runtime.startHats('isDeadHat', null, org.target.sprite);
+                this.runtime.startHats('botch_isDeadHat', null, org.target.sprite);
             }
             /* if (org.dead()) {
                 if (org.deathAnimation(util)) { // wait the end of animation
@@ -830,6 +830,17 @@ class Scratch3Botch {
             return ret;
         });
 
+    }
+
+    /**
+     * Shows how to directly start user defined hats
+     * @param {int} nTarget the index of a target
+     * @returns {object} the new threads
+     * @since botch-0.2
+     */
+    testHats (nTarget){
+        this.runtime._hats.botch_isDeadHat.edgeActivated = false;
+        return this.runtime.startHats('botch_isDeadHat', null, this.runtime.targets[nTarget]);
     }
     /**
      * Quick and dirty test, stores first sprite in the custom storageHelper
