@@ -71,7 +71,8 @@ class Scratch3Botch {
             log.log('Botch: on PROJECT_LOADED');
             this.storage = this.runtime.storage;
             if (!this.storageHelper){
-                if (this.runtime.storage){ // in some tests it is not defined ...
+                // in some tests it is not defined ...
+                if (this.storage && this.storage.addHelper){
                     this.storageHelper = new BotchStorageHelper(this.runtime.storage);
                     this.storage.addHelper(this.storageHelper);
                 } else {
