@@ -277,7 +277,7 @@ class Scratch3Botch {
                 util.target, this.mass, this.maxForce);
 
             // change the costume of the original sprite
-            const newSvg = new svgen(130, 130).generateOrgSVG(200, this.dna[0], this.dna[1], 5);
+            const newSvg = new svgen(130, 130).generateOrgSVG(200, org.dna[0], org.dna[1], 5);
             org.svg = newSvg;
 
             this.organismMap.set(util.target.id, org);
