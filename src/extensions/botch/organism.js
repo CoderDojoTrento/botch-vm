@@ -72,7 +72,8 @@ class Organism {
             this.dna[3] = Math.random() * 150; // poison perception
         }
 
-        this.svg = new svgen(130, 130).generateMultiple(this.dna[0], this.dna[1], 5);
+        // this.svg = new svgen(130, 130).generateMultiple(this.dna[0], this.dna[1], 5);
+        this.svg = new svgen(130, 130).generateOrgSVG(100, this.dna[0], this.dna[1], 5);
         this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
 
         // Variable assignment to the sprite

@@ -7,6 +7,7 @@ class SVGgen {
      * @param {int} width width of the svg
      * @param {int} height height of the svg
      * @param {string} color color base of the svg
+     * @since botch-0.1
      */
     constructor (width = 30, height = 30, color = SVGgen.getRandomColor()) {
         this.width = width;
@@ -23,6 +24,7 @@ class SVGgen {
     /**
      * Generate a random Hex color
      * @returns {string} new color
+     * @since botch-0.1
      */
     static getRandomColor () {
         const letters = '0123456789ABCDEF';
@@ -31,6 +33,34 @@ class SVGgen {
             color += letters[Math.floor(Math.random() * 16)];
         }
         return color;
+    }
+
+    /**
+     * Return the new color with a new luminosity
+     * @param {string} hex hex color
+     * @param {number} lum luminosity
+     * @returns {string} new color
+     * @author https://www.sitepoint.com/javascript-generate-lighter-darker-color/
+     * @since botch-0.2
+     */
+    colorLuminance (hex, lum) {
+
+        // validate hex string
+        hex = String(hex).replace(/[^0-9a-f]/gi, '');
+        if (hex.length < 6) {
+            hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+        }
+        lum = lum || 0;
+    
+        // convert to decimal and change luminosity
+        let rgb = '#'; let c; let i;
+        for (i = 0; i < 3; i++) {
+            c = parseInt(hex.substr(i * 2, 2), 16);
+            c = Math.round(Math.min(Math.max(0, c + (c * lum)), 255)).toString(16);
+            rgb += (`00${c}`).substr(c.length);
+        }
+    
+        return rgb;
     }
 
     checkBorders (margin) {
@@ -43,6 +73,81 @@ class SVGgen {
     }
 
     /**
+     * Generate an SVG using quadratic bezier curve
+     * the function works on a squared svg canvas
+     * it create 4 points on the diagonals
+     * y = x
+     * y = -x + this.height
+     * @param {number} dim dimension of the svg (square)
+     * @param {number} foodR food attraction
+     * @param {number} poisonR poison attraction
+     * @param {number} mag max poison or food attraction
+     * @returns {string} the svg
+     * @since botch-0.2
+     */
+    generateOrgSVG (dim, foodR, poisonR, mag) {
+        const f = MathUtil.scale(foodR, -mag, mag, 0, 15);
+        const p = MathUtil.scale(poisonR, -mag, mag, 0, 15);
+
+        // resize the canvas
+        this.width = dim;
+        this.height = dim;
+
+        // generate the 4 points on the diagonal
+        const margin = 15;
+        const w1 = (this.width / 2) - margin;
+        const w2 = (this.width / 2) + margin;
+        
+        const ta = Math.floor(this.rdn(0, w1));
+        const p1 = new Vector2(ta, ta);
+
+        const tb = Math.floor(this.rdn(w2, this.width - margin));
+        const p2 = new Vector2(tb, -tb + this.height);
+
+        const tc = Math.floor(this.rdn(w2, this.width - margin));
+        const p3 = new Vector2(tc, tc);
+
+        const td = Math.floor(this.rdn(0, w1));
+        const p4 = new Vector2(td, -td + this.height);
+
+        // generate the 4 control points
+        const va = Math.floor(this.rdn(0, this.width));
+        const v2a = va < this.width / 2 ?
+            Math.floor(this.rdn(0, va)) : Math.floor(this.rdn(0, -va + this.height));
+        const c1 = new Vector2(va, v2a);
+
+        const vb = Math.floor(this.rdn(this.width / 2, this.width));
+        const v2b = Math.floor(this.rdn(-vb + this.height, vb));
+        const c2 = new Vector2(vb, v2b);
+
+        const vc = Math.floor(this.rdn(0, this.width));
+        const v2c = vc < this.width / 2 ?
+            Math.floor(this.rdn(-vc + this.height, this.height)) : Math.floor(this.rdn(vc, this.height));
+        const c3 = new Vector2(vc, v2c);
+
+        const vd = Math.floor(this.rdn(0, this.width / 2));
+        const v2d = Math.floor(this.rdn(vd, -vd + this.height));
+        const c4 = new Vector2(vd, v2d);
+
+        return `<svg height="${this.height}" width="${this.width}" viewBox="0 0 ${this.width} ${this.height}" version="1.1" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">` +
+                `<defs> ` +
+                    `<radialGradient id="RadialGradient1"> ` +
+                    `<stop offset="0%" stop-color="${this.colorLuminance(this.color, 0.4)}"/> ` +
+                    `<stop offset="100%" stop-color="${this.colorLuminance(this.color, -0.2)}"/> ` +
+                    `</radialGradient>` +
+                `</defs>` +
+                    `<path d="M ${p1.x} ${p1.y} Q ${c1.x} ${c1.y} ${p2.x} ${p2.y} Q ${c2.x} ${c2.y} ${p3.x} ${p3.y} ` +
+                    `Q ${c3.x} ${c3.y} ${p4.x} ${p4.y} Q ${c4.x} ${c4.y} ${p1.x} ${p1.y}" ` +
+                    `fill="url(#RadialGradient1)" style="stroke:none;stroke-width:1" />` +
+                    `<circle cx="${p2.x}" cy="${p2.y}" ` +
+                    `r="${f}" stroke="none" stroke-width="1" fill="${this.colorLuminance(this.color, 0.7)}" />` + // food
+                    `<circle cx="${p3.x}" cy="${p3.y}" ` +
+                    `r="${p}" stroke="none" stroke-width="1" fill="${this.colorLuminance(this.color, -0.7)}" />` +
+        // `${this.pointToEyesTr(foodR, poisonR)}` +
+                `</svg>`;
+    }
+
+    /**
      * Generate 3 points in the svg space
      *
      *  3
@@ -50,6 +155,7 @@ class SVGgen {
      *  |    1
      *  | -
      *  2
+     * @since botch-0.1
      */
     generateTriangle () {
         const p1 = new Vector2(
@@ -77,6 +183,7 @@ class SVGgen {
      *  |    1
      *  | -
      *  2
+     * @since botch-0.1
      */
     generateTriangle2 (margin) {
         const p1 = new Vector2(
@@ -110,6 +217,7 @@ class SVGgen {
      *  |   -2
      *  1 -
      * @param {number} margin margin
+     * @since botch-0.1
      */
     generateTrapezoid (margin) {
         const v = this.width;
@@ -143,6 +251,7 @@ class SVGgen {
     /**
      * Compute the center of gravity of the trapezoid and center it in the frame
      * https://online.scuola.zanichelli.it/cannarozzozavanella-files/Costruzioni/Approfondimenti/Zanichelli_Costruzioni_UnitaE1_Par5.pdf
+     * @since botch-0.1
      */
     computeCenterGravityTrapezoid () {
         const h = Math.abs(this.points[1].x - this.points[0].x);
@@ -183,14 +292,8 @@ class SVGgen {
     }
 
     /**
-     * Compute the center of the trapezoid respect to the bounding box
-     */
-    computeCenterBoundingBoxTrapezoid () {
-
-    }
-
-    /**
      * https://it.wikipedia.org/wiki/Baricentro_(geometria)
+     * @since botch-0.1
      */
     computeBarycenterTriangle () {
         let Xbr = 0;
@@ -224,11 +327,13 @@ class SVGgen {
 
     }
 
-    pointToCircle () {
-        return `<circle cx=" ${this.points[0].x}" cy="${this.points[0].y}" ` +
-        `r="4" stroke="black" stroke-width="2" fill="red" />`;
-    }
-
+    /**
+     * generate the "eyes" of the trapezoid
+     * @param {number} foodR food att eye size
+     * @param {number} poisonR poison att eye size
+     * @returns {string} svg of the eyes in the points position
+     * @since botch-0.1
+     */
     pointToEyesTr (foodR, poisonR) {
         return `<circle cx=" ${this.points[2].x}" cy="${this.points[2].y}" ` +
         `r="${foodR}" stroke="black" stroke-width="1" fill="green" />` + // food
@@ -236,7 +341,14 @@ class SVGgen {
         `r="${poisonR}" stroke="black" stroke-width="1" fill="red" />`; // poison
     }
 
-    // eyes of triangle
+    /**
+     * generate the "eyes" of the triangle
+     * @param {number} foodR food att eye size
+     * @param {number} poisonR poison att eye size
+     * @param {number} sign sign of the attraction
+     * @returns {string} svg of the eyes in the points position
+     * @since botch-0.1
+     */
     pointToEyesCr (foodR, poisonR, sign) {
         const i = sign > 0 ? 0 : 1;
         
@@ -244,9 +356,13 @@ class SVGgen {
         `r="${foodR}" stroke="black" stroke-width="1" fill="green" />` +
         `<circle cx=" ${this.points[1 - i].x}" cy="${this.points[1 - i].y}" ` +
         `r="${poisonR}" stroke="black" stroke-width="1" fill="red" />`;
-        
     }
 
+    /**
+     * return a string of each point coordinates x,y
+     * @returns {string} coordinate
+     * @since botch-0.1
+     */
     pointsToString () {
         let str = '';
         this.points.forEach(c => {
@@ -254,31 +370,17 @@ class SVGgen {
         });
         return str;
     }
-    
-    // trapezoid with eyes
-    generateObj3 (foodR, poisonR) {
-        this.generateTrapezoid(25);
-        this.computeCenterGravityTrapezoid();
 
-        return `<svg height="${this.height}" width="${this.width}" viewBox="0 0 ${this.width} ${this.height}" version="1.1" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">` +
-        `<polygon points="${this.pointsToString()}" style="fill:${this.color};stroke:black;stroke-width:3" />` +
-        `${this.pointToEyesTr(foodR, poisonR)}` +
-        `</svg>`;
-    }
-
-    // trapezoid
-    generateObj2 () {
-        this.generateTrapezoid();
-        this.computeCenterTrapezoid();
-
-        return `<svg height="${this.height}" width="${this.width}" viewBox="0 0 ${this.width} ${this.height}" version="1.1" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">` +
-        `<polygon points="${this.pointsToString()}" style="fill:${this.color};stroke:black;stroke-width:4" />` +
-        `</svg>`;
-    }
-
-    // triangle with eyes or trapezoid
-    // if it is attracted or repulsed by both food and poison => trapezoid
-    // else triangle
+    /**
+     * triangle with eyes or trapezoid
+     * if it is attracted or repulsed by both food and poison => trapezoid
+     * else triangle
+     * @param {number} foodR food attraction
+     * @param {number} poisonR poison attraction
+     * @param {number} mag max poison or food attraction
+     * @returns {string} svg
+     * @since botch-0.1
+     */
     generateMultiple (foodR, poisonR, mag) {
         const f = MathUtil.scale(foodR, -mag, mag, 0, 15);
         const p = MathUtil.scale(poisonR, -mag, mag, 0, 15);
@@ -303,7 +405,21 @@ class SVGgen {
         
     }
 
-    // triangle
+    /**
+     * generate a point on the head of the triangle
+     * @returns {string} svg circle
+     * @since botch-0.1
+     */
+    pointToCircle () {
+        return `<circle cx=" ${this.points[0].x}" cy="${this.points[0].y}" ` +
+        `r="4" stroke="black" stroke-width="2" fill="red" />`;
+    }
+
+    /**
+     * generate triangle with eyes
+     * @returns {string} svg
+     * @since botch-0.1
+     */
     generateSvgObj1 () {
         this.generateTriangle();
         this.computeBarycenterTriangle();

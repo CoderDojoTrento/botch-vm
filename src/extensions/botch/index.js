@@ -131,6 +131,7 @@ class Scratch3Botch {
                 {
                     opcode: 'isDeadHat',
                     blockType: BlockType.HAT,
+                    isEdgeActivated: false,
                     text: 'when an organism dies'
                 },
                 {
@@ -276,7 +277,7 @@ class Scratch3Botch {
                 util.target, this.mass, this.maxForce);
 
             // change the costume of the original sprite
-            const newSvg = new svgen(130, 130).generateMultiple(org.dna[0], org.dna[1], 5);
+            const newSvg = new svgen(130, 130).generateOrgSVG(200, this.dna[0], this.dna[1], 5);
             org.svg = newSvg;
 
             this.organismMap.set(util.target.id, org);
@@ -507,8 +508,10 @@ class Scratch3Botch {
                     this.organismMap.set(newClone.id, newOrg);
                 }
             }
+
             if (org.dead()) {
-                this.runtime.startHats('botch_isDeadHat', null, org.target.sprite);
+                this.runtime._hats.botch_isDeadHat.edgeActivated = false;
+                this.runtime.startHats('botch_isDeadHat', null, org.target);
             }
             /* if (org.dead()) {
                 if (org.deathAnimation(util)) { // wait the end of animation
@@ -565,7 +568,8 @@ class Scratch3Botch {
             }
 
             if (org.dead()) {
-                this.runtime.startHats('botch_isDeadHat', null, org.target.sprite);
+                this.runtime._hats.botch_isDeadHat.edgeActivated = false;
+                this.runtime.startHats('botch_isDeadHat', null, org.target);
             }
             /* if (org.dead()) {
                 if (org.deathAnimation(util)) { // wait the end of animation
