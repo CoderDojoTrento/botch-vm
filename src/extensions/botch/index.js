@@ -45,8 +45,14 @@ class Scratch3Botch {
             log.log('Botch: on PROJECT_LOADED');
             this.storage = this.runtime.storage;
             if (!this.storageHelper){
-                this.storageHelper = new BotchStorageHelper(this.runtime.storage);
-                this.storage.addHelper(this.storageHelper);
+                // in some tests it is not defined ...
+                if (this.storage && this.storage.addHelper){
+                    this.storageHelper = new BotchStorageHelper(this.runtime.storage);
+                    this.storage.addHelper(this.storageHelper);
+                } else {
+                    log.log('this.runtime.storage is not defined, skipping BotchStorageHelper initialization');
+                }
+
             }
             // this.testStoreSprite();
         }));
@@ -54,7 +60,12 @@ class Scratch3Botch {
         log.log('Botch runtime:', runtime);
         log.log('Botch custom storageHelper:', this.storageHelper);
 
-        window.BOTCH = this;
+        // browser detection arcana https://stackoverflow.com/a/41863502
+        if (this.window === this){
+            window.BOTCH = this; // browser
+        } else {
+            global.BOTCH = this; // node
+        }
 
         // show the organism when stopped
         this.runtime.on(Runtime.PROJECT_STOP_ALL, (() => {
@@ -796,6 +807,14 @@ class Scratch3Botch {
                         for (const cost of sprite.costumes){
                             // NOTE 1: in costumes 'md5' field also has '.svg' appended
                             
+                            // this way it will have inside the precious encodeDataURI method
+                            cost.asset = new this.storage.Asset(
+                                cost.asset.assetType,
+                                cost.asset.assetId,
+                                cost.asset.dataFormat,
+                                cost.asset.data,
+                                false
+                            );
                             cost.md5ext = cost.md5;
                             // NOTE 2: in preloaded data there is no md5, only md5ext
                             delete cost.md5;
