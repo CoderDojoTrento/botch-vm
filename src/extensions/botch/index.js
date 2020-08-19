@@ -27,20 +27,23 @@ class Scratch3Botch {
 
     constructor (runtime) {
         this.runtime = runtime;
-        this.child = '';
-        this.vehicleMap = new Map();
+        this.storage = this.runtime.storage;
+        // map that contains the organism <id, org> or enemies
         this.organismMap = new Map();
         this.enemiesMap = new Map();
-        this.storage = this.runtime.storage;
-        this.foodMap = new Map();
-        this.poisonMap = new Map();
+        // the target that represent the food or poison
         this.foodTarget = {};
         this.poisonTarget = {};
+        // default option for the new organism
         this.maxForce = 0.5;
         this.enemiesMaxForce = 0.3;
         this.mass = 1;
+        // utils
         this.botchUtil = new BotchUtil(this.runtime);
         
+        // since that the project is loaded at the startup
+        // for some reasons the storage is not already defined and it needs to
+        // be redefined
         this.runtime.on(Runtime.PROJECT_LOADED, (() => {
             log.log('Botch: on PROJECT_LOADED');
             this.storage = this.runtime.storage;
@@ -86,7 +89,7 @@ class Scratch3Botch {
                     text: 'console debug'
                 },
                 {
-                    opcode: 'setAs', // TODO define a tendina
+                    opcode: 'setAs',
                     blockType: BlockType.COMMAND,
                     text: 'set as [TYPE]',
                     arguments: {
@@ -98,7 +101,7 @@ class Scratch3Botch {
                     }
                 },
                 {
-                    opcode: 'generatePopulation', // TODO generate n child con tendina
+                    opcode: 'generatePopulation',
                     blockType: BlockType.COMMAND,
                     text: 'generate [COPIES] children',
                     arguments: {
@@ -277,7 +280,7 @@ class Scratch3Botch {
                 util.target, this.mass, this.maxForce);
 
             // change the costume of the original sprite
-            const newSvg = new svgen(130, 130).generateOrgSVG(200, org.dna[0], org.dna[1], 5);
+            const newSvg = new svgen(130, 130).generateOrgSVG(100, org.dna[0], org.dna[1], 5);
             org.svg = newSvg;
 
             this.organismMap.set(util.target.id, org);
@@ -385,6 +388,8 @@ class Scratch3Botch {
 
     /**
      * Generate n children of Organism or Enemy
+     * all the organism that are in the stage are clones
+     * this is to have the control of when an organism die
      * @param {args} args args
      * @param {util} util util
      * @returns {string} message
@@ -599,11 +604,25 @@ class Scratch3Botch {
             }
         }
     }
-
+    
+    /**
+     * the hat of "when an organism dies"
+     * the block is defined with isEdgeTriggered: false
+     * in this way it return true only when the hat is activated
+     * (when it dies)
+     * @returns {boolean} true
+     * @since botch-0.2
+     */
     isDeadHat () {
         return true;
     }
 
+    /**
+     * remove a specific organism whit the death animation
+     * @param {args} args args
+     * @param {util} util util
+     * @since botch-0.2
+     */
     removeOrganism (args, util) {
         if (this.organismMap.size > 1) {
             const org = this.organismMap.get(util.target.id);
@@ -865,6 +884,7 @@ class Scratch3Botch {
         this.runtime._hats.botch_isDeadHat.edgeActivated = false;
         return this.runtime.startHats('botch_isDeadHat', null, this.runtime.targets[nTarget]);
     }
+
     /**
      * Quick and dirty test, stores first sprite in the custom storageHelper
      * @since botch-0.1
