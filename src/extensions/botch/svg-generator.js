@@ -1,5 +1,6 @@
 const Vector2 = require('./vector2');
 const MathUtil = require('../../util/math-util');
+const Organism = require('./organism');
 
 class SVGgen {
     /**
@@ -15,6 +16,9 @@ class SVGgen {
         this.color = color;
         this.points = [];
         this.strokeWidth = 4;
+
+        this.svgPoints = [];
+        this.controlPoints = [];
     }
 
     rdn (min, max) {
@@ -73,77 +77,149 @@ class SVGgen {
     }
 
     /**
+     * Return the points of the org svg
+     * @returns {Array} in array[0] = svg points, array[1] = control points
+     * @since botch-0.2
+     */
+    getOrgPoints () {
+        return [this.svgPoints, this.controlPoints];
+    }
+
+    /**
      * Generate an SVG using quadratic bezier curve
      * the function works on a squared svg canvas
      * it create 4 points on the diagonals
      * y = x
      * y = -x + this.height
+     * if parentPoints point is defined, it create a shape with similar points
      * @param {number} dim dimension of the svg (square)
      * @param {number} foodR food attraction
      * @param {number} poisonR poison attraction
      * @param {number} mag max poison or food attraction
+     * @param {Array} parentPoints the points of the parent
      * @returns {string} the svg
      * @since botch-0.2
+     * fa piuttosto schifo da vedere come funzione...
      */
-    generateOrgSVG (dim, foodR, poisonR, mag) {
+    generateOrgSVG (dim, foodR, poisonR, mag, parentPoints) {
         const f = MathUtil.scale(foodR, -mag, mag, 0, 15);
         const p = MathUtil.scale(poisonR, -mag, mag, 0, 15);
 
-        // resize the canvas
+        // resize the canvas to be a square
         this.width = dim;
         this.height = dim;
-
-        // generate the 4 points on the diagonal
+       
         const margin = 15;
         const w1 = (this.width / 2) - margin;
         const w2 = (this.width / 2) + margin;
+        // the new points differ by -min +max from the parent point
+        const min = -10;
+        const max = 10;
+        let p1; let p2; let p3; let p4; let c1; let c2; let c3; let c4;
+
+        if (parentPoints) {
+            // generate the 4 points on the diagonal
+            const ta = MathUtil.clamp(
+                parentPoints[0][0].x + Math.floor(this.rdn(min, max)), 0, w1);
+            p1 = new Vector2(ta, ta);
+ 
+            const tb = MathUtil.clamp(
+                parentPoints[0][1].x + Math.floor(this.rdn(min, max)), w2, this.width - margin);
+            p2 = new Vector2(tb, -tb + this.height);
+            
+            const tc = MathUtil.clamp(
+                parentPoints[0][2].x + Math.floor(this.rdn(min, max)), w2, this.width - margin);
+            p3 = new Vector2(tc, tc);
+ 
+            const td = MathUtil.clamp(
+                parentPoints[0][3].x + Math.floor(this.rdn(min, max)), 0, w1);
+            p4 = new Vector2(td, -td + this.height);
+
+            // generate the 4 control points
+            const va = MathUtil.clamp(
+                parentPoints[1][0].x + Math.floor(this.rdn(min, max)), 0, this.width);
+            const v2a = va < this.width / 2 ?
+                Math.floor(this.rdn(0, va)) : Math.floor(this.rdn(0, -va + this.height));
+            c1 = new Vector2(va, v2a);
+
+            const vb = MathUtil.clamp(
+                parentPoints[1][1].x + Math.floor(this.rdn(min, max)), this.width / 2, this.width);
+            const v2b = Math.floor(this.rdn(-vb + this.height, vb));
+            c2 = new Vector2(vb, v2b);
+
+            const vc = MathUtil.clamp(
+                parentPoints[1][2].x + Math.floor(this.rdn(min, max)), 0, this.width);
+            const v2c = vc < this.width / 2 ?
+                Math.floor(this.rdn(-vc + this.height, this.height)) : Math.floor(this.rdn(vc, this.height));
+            c3 = new Vector2(vc, v2c);
+
+            const vd = MathUtil.clamp(
+                parentPoints[1][3].x + Math.floor(this.rdn(min, max)), 0, this.width / 2);
+            const v2d = Math.floor(this.rdn(vd, -vd + this.height));
+            c4 = new Vector2(vd, v2d);
+        } else {
+            // generate the 4 points on the diagonal
+            const ta = Math.floor(this.rdn(0, w1));
+            p1 = new Vector2(ta, ta);
+
+            const tb = Math.floor(this.rdn(w2, this.width - margin));
+            p2 = new Vector2(tb, -tb + this.height);
+
+            const tc = Math.floor(this.rdn(w2, this.width - margin));
+            p3 = new Vector2(tc, tc);
+
+            const td = Math.floor(this.rdn(0, w1));
+            p4 = new Vector2(td, -td + this.height);
+
+            // generate the 4 control points
+            const va = Math.floor(this.rdn(0, this.width));
+            const v2a = va < this.width / 2 ?
+                Math.floor(this.rdn(0, va)) : Math.floor(this.rdn(0, -va + this.height));
+            c1 = new Vector2(va, v2a);
+
+            const vb = Math.floor(this.rdn(this.width / 2, this.width));
+            const v2b = Math.floor(this.rdn(-vb + this.height, vb));
+            c2 = new Vector2(vb, v2b);
+
+            const vc = Math.floor(this.rdn(0, this.width));
+            const v2c = vc < this.width / 2 ?
+                Math.floor(this.rdn(-vc + this.height, this.height)) : Math.floor(this.rdn(vc, this.height));
+            c3 = new Vector2(vc, v2c);
+
+            const vd = Math.floor(this.rdn(0, this.width / 2));
+            const v2d = Math.floor(this.rdn(vd, -vd + this.height));
+            c4 = new Vector2(vd, v2d);
+        }
+
+        this.svgPoints = [p1, p2, p3, p4];
+        this.controlPoints = [c1, c2, c3, c4];
         
-        const ta = Math.floor(this.rdn(0, w1));
-        const p1 = new Vector2(ta, ta);
-
-        const tb = Math.floor(this.rdn(w2, this.width - margin));
-        const p2 = new Vector2(tb, -tb + this.height);
-
-        const tc = Math.floor(this.rdn(w2, this.width - margin));
-        const p3 = new Vector2(tc, tc);
-
-        const td = Math.floor(this.rdn(0, w1));
-        const p4 = new Vector2(td, -td + this.height);
-
-        // generate the 4 control points
-        const va = Math.floor(this.rdn(0, this.width));
-        const v2a = va < this.width / 2 ?
-            Math.floor(this.rdn(0, va)) : Math.floor(this.rdn(0, -va + this.height));
-        const c1 = new Vector2(va, v2a);
-
-        const vb = Math.floor(this.rdn(this.width / 2, this.width));
-        const v2b = Math.floor(this.rdn(-vb + this.height, vb));
-        const c2 = new Vector2(vb, v2b);
-
-        const vc = Math.floor(this.rdn(0, this.width));
-        const v2c = vc < this.width / 2 ?
-            Math.floor(this.rdn(-vc + this.height, this.height)) : Math.floor(this.rdn(vc, this.height));
-        const c3 = new Vector2(vc, v2c);
-
-        const vd = Math.floor(this.rdn(0, this.width / 2));
-        const v2d = Math.floor(this.rdn(vd, -vd + this.height));
-        const c4 = new Vector2(vd, v2d);
-
         return `<svg height="${this.height}" width="${this.width}" viewBox="0 0 ${this.width} ${this.height}" version="1.1" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">` +
-                `<defs> ` +
-                    `<radialGradient id="RadialGradient1"> ` +
-                    `<stop offset="0%" stop-color="${this.colorLuminance(this.color, 0.4)}"/> ` +
-                    `<stop offset="100%" stop-color="${this.colorLuminance(this.color, -0.2)}"/> ` +
+                    `<radialGradient id="RadialGradient1" ` +
+                    `cx="${this.width / 2}" cy="${this.height / 2}" r="${this.width / 3}" ` +
+                    `gradientUnits="userSpaceOnUse"> ` +
+                    `<stop offset="0" style="stop-color:${this.colorLuminance(this.color, 0.4)}"></stop> ` +
+                    `<stop offset="1" style="stop-color:${this.colorLuminance(this.color, -0.2)}"></stop> ` +
                     `</radialGradient>` +
-                `</defs>` +
+                    `<radialGradient id="RadialGradient2" ` +
+                    `cx="${p2.x}" cy="${p2.y}" r="${f / 3}" ` +
+                    `gradientUnits="userSpaceOnUse"> ` +
+                    `<stop offset="0" style="stop-color:${this.colorLuminance(this.color, -0.9)}"></stop> ` +
+                    `<stop offset="1" style="stop-color:${this.colorLuminance(this.color, 0.9)}"></stop> ` +
+                    `</radialGradient>` +
+                    `<radialGradient id="RadialGradient3" ` +
+                    `cx="${p3.x}" cy="${p3.y}" r="${p / 3}" ` +
+                    `gradientUnits="userSpaceOnUse"> ` +
+                    `<stop offset="0" style="stop-color:${this.colorLuminance(this.color, -0.9)}"></stop> ` +
+                    `<stop offset="1" style="stop-color:${this.colorLuminance(this.color, 0.9)}"></stop> ` +
+                    `</radialGradient>` +
                     `<path d="M ${p1.x} ${p1.y} Q ${c1.x} ${c1.y} ${p2.x} ${p2.y} Q ${c2.x} ${c2.y} ${p3.x} ${p3.y} ` +
                     `Q ${c3.x} ${c3.y} ${p4.x} ${p4.y} Q ${c4.x} ${c4.y} ${p1.x} ${p1.y}" ` +
-                    `fill="url(#RadialGradient1)" style="stroke:none;stroke-width:1" />` +
-                    `<circle cx="${p2.x}" cy="${p2.y}" ` +
-                    `r="${f}" stroke="none" stroke-width="1" fill="${this.colorLuminance(this.color, 0.7)}" />` + // food
+                    `fill="url(#RadialGradient1)" stroke="none" stroke-width="1" />` +
+                    `<circle cx="${p2.x}" cy="${p2.y}" ` + // food
+                    `r="${f}" stroke="none" stroke-width="1" fill="url(#RadialGradient2)" />` +
                     `<circle cx="${p3.x}" cy="${p3.y}" ` +
-                    `r="${p}" stroke="none" stroke-width="1" fill="${this.colorLuminance(this.color, -0.7)}" />` +
-        // `${this.pointToEyesTr(foodR, poisonR)}` +
+                    `r="${p}" stroke="none" stroke-width="1" fill="url(#RadialGradient3)" />` +
                 `</svg>`;
     }
 

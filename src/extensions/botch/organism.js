@@ -21,47 +21,50 @@ class Organism {
      * @param {RenderedTarget} target_ target (sprite)
      * @param {number} mass_ mass of the vehicle
      * @param {number} maxForce_ max force of the vehicle
-     * @param {string} svg_  new svg of the organism
-     * @param {Array} dna dna
+     * @param {string} svgPoints_  svg points of the organism
+     * @param {Array} dna_ dna
      */
-    constructor (target_, mass_ = 1, maxForce_ = 0.5, svg_, dna) {
+    constructor (target_, mass_ = 1, maxForce_ = 0.5, svgPoints_, dna_,) {
+        // vehicle proprieties
         this.acceleration = new Vector2(0, 0);
         this.velocity = new Vector2(1, 2);
         this.position = new Vector2(target_.x, target_.y);
         this.maxSpeed = 5;
         this.maxForce = maxForce_; // agility ?
-        this.target = target_;
         this.mass = mass_;
-        this.svg = svg_;
+        // organism utils and proprieties
+        this.target = target_;
+        this.svgPoints = svgPoints_;
         this.health = 1;
-        this.renderer = this.target.renderer;
-        this.runtime = this.target.runtime;
-        this.storage = this.runtime.storage;
         this.mr = 0.01;
-        this.living = 0; // performance.now();
+        this.living = 0;
         this.effectStep = 7;
         this.currEffectStep = this.effectStep;
         this.effectSign = 1;
+        this.dna = [];
+        // utils
+        this.renderer = this.target.renderer;
+        this.runtime = this.target.runtime;
+        this.storage = this.runtime.storage;
 
+        this.svgGen = new svgen(100, 100);
         this.botchUtil = new BotchUtil(this.runtime);
 
-        this.dna = [];
-
-        if (dna) {
+        if (dna_) {
             // Mutation
-            this.dna[0] = dna[0];
+            this.dna[0] = dna_[0];
             if (Math.random() < this.mr) {
-                this.dna[0] += this.botchUtil.rdn(-0.3, 0.3);
+                this.dna[0] += this.botchUtil.rdn(-1, 1);
             }
-            this.dna[1] = dna[1];
+            this.dna[1] = dna_[1];
             if (Math.random() < this.mr) {
-                this.dna[1] += this.botchUtil.rdn(-0.3, 0.3);
+                this.dna[1] += this.botchUtil.rdn(-1, 1);
             }
-            this.dna[2] = dna[2];
+            this.dna[2] = dna_[2];
             if (Math.random() < this.mr) {
                 this.dna[2] += this.botchUtil.rdn(-15, 15);
             }
-            this.dna[3] = dna[3];
+            this.dna[3] = dna_[3];
             if (Math.random() < this.smr) {
                 this.dna[3] += this.botchUtil.rdn(-15, 15);
             }
@@ -72,9 +75,14 @@ class Organism {
             this.dna[3] = Math.random() * 150; // poison perception
         }
 
-        // this.svg = new svgen(130, 130).generateMultiple(this.dna[0], this.dna[1], 5);
-        this.svg = new svgen(130, 130).generateOrgSVG(100, this.dna[0], this.dna[1], 5);
-        this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
+        if (svgPoints_) {
+            this.svg = this.svgGen.generateOrgSVG(100, this.dna[0], this.dna[1], 5, svgPoints_);
+            this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
+        } else {
+            // this.svg = new svgen(130, 130).generateMultiple(this.dna[0], this.dna[1], 5);
+            this.svg = this.svgGen.generateOrgSVG(100, this.dna[0], this.dna[1], 5);
+            this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
+        }
 
         // Variable assignment to the sprite
         // each clone has the its own dna saved and the dna of the non-clone target
@@ -277,8 +285,8 @@ class Organism {
      * @since botch-0.1
      */
     clone () {
-        if (/* !this.target.isOriginal &&  */Math.random() < 0.002) {
-            return new Organism(this.target, 1, 0.5, this.svg, this.dna);
+        if (Math.random() < 0.002) {
+            return new Organism(this.target, 1, 0.5, this.svgGen.getOrgPoints(), this.dna);
         }
         return null;
     }
