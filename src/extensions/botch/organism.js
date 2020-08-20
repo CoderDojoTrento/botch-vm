@@ -9,7 +9,6 @@ if (typeof TextEncoder === 'undefined') {
 const Vector2 = require('./vector2');
 const MathUtil = require('../../util/math-util');
 const svgen = require('./svg-generator');
-const Enemy = require('./enemy');
 const BotchUtil = require('./botchUtil');
 
 /**
@@ -25,15 +24,21 @@ class Organism {
      * @param {Array} dna_ dna
      */
     constructor (target_, mass_ = 1, maxForce_ = 0.5, svgPoints_, dna_,) {
+        // utils
+        this.target = target_;
+        this.renderer = this.target.renderer;
+        this.runtime = this.target.runtime;
+        this.storage = this.runtime.storage;
+        this.svgGen = new svgen(100, 100);
+        this.botchUtil = new BotchUtil(this.runtime);
         // vehicle proprieties
         this.acceleration = new Vector2(0, 0);
-        this.velocity = new Vector2(1, 2);
+        this.velocity = new Vector2(this.botchUtil.rdn(-2, 2), this.botchUtil.rdn(-2, 2));
         this.position = new Vector2(target_.x, target_.y);
         this.maxSpeed = 5;
         this.maxForce = maxForce_; // agility ?
         this.mass = mass_;
         // organism utils and proprieties
-        this.target = target_;
         this.svgPoints = svgPoints_;
         this.health = 1;
         this.mr = 0.01;
@@ -41,14 +46,8 @@ class Organism {
         this.effectStep = 7;
         this.currEffectStep = this.effectStep;
         this.effectSign = 1;
+        this.perception = 100;
         this.dna = [];
-        // utils
-        this.renderer = this.target.renderer;
-        this.runtime = this.target.runtime;
-        this.storage = this.runtime.storage;
-
-        this.svgGen = new svgen(100, 100);
-        this.botchUtil = new BotchUtil(this.runtime);
 
         if (dna_) {
             // Mutation
@@ -68,19 +67,25 @@ class Organism {
             if (Math.random() < this.smr) {
                 this.dna[3] += this.botchUtil.rdn(-15, 15);
             }
+            this.dna[4] = dna_[4];
+            if (Math.random() < this.mr) {
+                this.dna[4] += this.botchUtil.rdn(-1, 1);
+            }
+            this.dna[5] = dna_[5];
+            if (Math.random() < this.smr) {
+                this.dna[5] += this.botchUtil.rdn(-15, 15);
+            }
         } else {
             this.dna[0] = (Math.random() * 10) - 5; // food attraction
             this.dna[1] = (Math.random() * 10) - 5; // poison attraction
             this.dna[2] = Math.random() * 150; // food perception
             this.dna[3] = Math.random() * 150; // poison perception
+            this.dna[4] = (Math.random() * 10) - 5; // enemy attraction
+            this.dna[5] = Math.random() * 150; // enemy perception
         }
 
         if (svgPoints_) {
             this.svg = this.svgGen.generateOrgSVG(100, this.dna[0], this.dna[1], 5, svgPoints_);
-            this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
-        } else {
-            // this.svg = new svgen(130, 130).generateMultiple(this.dna[0], this.dna[1], 5);
-            this.svg = this.svgGen.generateOrgSVG(100, this.dna[0], this.dna[1], 5);
             this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
         }
 
@@ -93,6 +98,52 @@ class Organism {
             list.value.push(element);
         });
         list._monitorUpToDate = false;
+    }
+
+    /**
+     * Compute the step needed to move
+     * @param {RenderedTarget} foodTarget foodTarget
+     * @param {RenderedTarget} poisonTarget poisonTarget
+     * @param {Map} enemiesMap enemiesMap
+     * @since botch-0.2
+     */
+    stepOrganism (foodTarget, poisonTarget, enemiesMap) {
+        this.boundaries(
+            this.runtime.constructor.STAGE_WIDTH,
+            this.runtime.constructor.STAGE_HEIGHT);
+        this.refreshArgs(this.mass, this.maxForce);
+        this.behaveGeneralOrganism(foodTarget, poisonTarget, enemiesMap);
+        this.update();
+        this.breathe();
+    }
+
+    /**
+     * Compute the step needed to move
+     * @param {Map} organismMap the organism map
+     * @since botch-0.2
+     */
+    stepEnemy (organismMap) {
+        this.boundaries(
+            this.runtime.constructor.STAGE_WIDTH - 150,
+            this.runtime.constructor.STAGE_HEIGHT - 150);
+        this.refreshArgs(this.mass, this.maxForce);
+        this.behaveEnemy(organismMap);
+        this.update();
+    }
+
+    /**
+     * assign the new generated costume to the target
+     */
+    assignOrgCostume () {
+        this.svg = this.svgGen.generateOrgSVG(100, this.dna[0], this.dna[1], 5);
+        this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
+    }
+
+    /**
+     * assign a new generated enemy costume to the target
+     */
+    assignEnemyCostume () {
+        // TODO
     }
 
     /**
@@ -113,39 +164,77 @@ class Organism {
     }
 
     /**
-     * Behave with food and poison
-     * ApplyForce is called here and not in seek
-     * @param {Map} good food map or some sprites that rise the health
-     * @param {Map} bad poison map or some sprites that low the health
-     * @since botch-0.1
+     * General behaviour for organism
+     * @param {RenderedTarget} foodTarget foodTarget
+     * @param {RenderedTarget} poisonTarget poisonTarget
+     * @param {Map<string, Organism>} enemiesMap enemies map
+     * @since botch-0.2
      */
-    behaviors (good, bad) {
-        const steerG = this.eat(good, 0.2, this.dna[2]);
-        const steerB = this.eat(bad, -0.5, this.dna[3]);
-
+    behaveGeneralOrganism (foodTarget, poisonTarget, enemiesMap) {
+        let steerG = new Vector2(0, 0);
+        let steerB = new Vector2(0, 0);
+        let steerE = new Vector2(0, 0);
+        if (foodTarget.hasOwnProperty('sprite')) {
+            steerG = this.eatGeneral(foodTarget, 0.2, this.dna[2]);
+        }
+        if (poisonTarget.hasOwnProperty('sprite')) {
+            steerB = this.eatGeneral(poisonTarget, -0.5, this.dna[3]);
+        }
+        if (enemiesMap && enemiesMap.size > 0) {
+            steerE = this.eatGeneral(enemiesMap, 0, this.dna[4]);
+        }
         steerG.mult(this.dna[0]);
         steerB.mult(this.dna[1]);
-
+        steerE.mult(this.dna[5]);
         this.applyForce(steerG);
         this.applyForce(steerB);
+        this.applyForce(steerE);
     }
 
     /**
-     * Behave with food and enemies
+     * Behave with enemies
      * ApplyForce is called here and not in seek
-     * @param {Map} good food map or some sprites that rise the health
-     * @param {Map} bad some sprites that low the health
+     * @param {Map} organism the organism map
+     * @since botch-0.1
+     */
+    behaveEnemy (organism) {
+        if (organism.size > 0) {
+            const steerO = this.attack(organism);
+            steerO.mult(0.8); // TO DO, TO DEFINE
+            this.applyForce(steerO);
+        }
+    }
+
+    /**
+     * Similar to Organism.eat but no sprites are deleted
+     * @param {Map} organism organism
+     * @param {number} perception_ max distance to organism
+     * @returns {Vector2} seek force
      * @since botch-0.2
      */
-    behaviourEnemy (good, bad) {
-        const steerG = this.eat(good, 0.2, this.dna[2]);
-        const steerB = this.eatEnemy(bad, -0.5, this.dna[3]);
+    attack (organism, perception_) {
+        let record = Infinity;
+        const perception = this.perception || perception_;
+        let closest = null;
+        const esc = 10;
 
-        steerG.mult(this.dna[0]);
-        steerB.mult(this.dna[1]);
+        for (const o of organism.values()) {
+            if (!o.target.isOriginal) { // do not consider the original
+                const d = new Vector2(o.target.x, o.target.y).dist(new Vector2(this.target.x, this.target.y));
+                if (d < esc) {
+                    o.health -= 0.1;
+                } else if (d < record && d < perception) {
+                    record = d;
+                    closest = o;
+                }
+            }
+        }
 
-        this.applyForce(steerG);
-        this.applyForce(steerB);
+        if (closest && closest.health > 0) {
+            return this.seek(closest.target.x, closest.target.y);
+        }
+
+        return new Vector2(0, 0);
     }
 
     /**
@@ -158,100 +247,44 @@ class Organism {
      * @returns {Vector2} steer force
      * @since botch-0.2
      */
-    eat (agent, nutrition, perception) {
+    eatGeneral (agent, nutrition, perception) {
         let record = Infinity;
         let closest = null;
         const stageW = this.target.runtime.constructor.STAGE_WIDTH;
         const stageH = this.target.runtime.constructor.STAGE_HEIGHT;
-        let esc = 30;
+        const esc = 30;
 
-        // get all the clones
-        const all = agent.sprite.clones;
-
-        all.forEach(element => {
-            let en = false;
-            if (element instanceof Enemy) {
-                element = element.target;
-                en = true;
-                esc = 10;
-            }
-
-            const d = new Vector2(element.x, element.y).dist(new Vector2(this.target.x, this.target.y));
-
-            // If is close to food (eat) change the position if is original
-            // otherwise delete the clone
-            // Easier
-            if (d < esc) { // (this.isTouchingObject(f)) { // there is no isTouchingSprite() with a specific ID
-                if (en) {
-                    this.health -= 0.1;
-                } else {
+        if (agent.hasOwnProperty('sprite')) { // with food and poison
+            // get all the clones
+            const all = agent.sprite.clones;
+            all.forEach(element => {
+                const d = new Vector2(element.x, element.y).dist(new Vector2(this.target.x, this.target.y));
+    
+                // If is close to food (eat) change the position if is original
+                // otherwise delete the clone
+                // Easier
+                if (d < esc) { // (this.isTouchingObject(f)) { // there is no isTouchingSprite() with a specific ID
                     this.health += nutrition;
                     if (element.isOriginal) {
                         element.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
                     } else {
-                        this.target.runtime.disposeTarget(element);
-                        this.target.runtime.stopForTarget(element);
+                        this.runtime.disposeTarget(element);
+                        this.runtime.stopForTarget(element);
                     }
+                    
+                } else if (d < record && d < perception) {
+                    record = d;
+                    closest = element;
                 }
-            } else if (d < record && d < perception) {
-                record = d;
-                closest = element;
-            }
-        });
-
-        if (closest) {
-            return this.seek(closest.x, closest.y);
-        }
-
-        return new Vector2(0, 0);
-    }
-
-    /**
-     * Eat the list passed and set the health of the organism
-     * according to the nutrition
-     * If the list passed is an enemy it will be treated differently
-     * @param {Map} list food or poison
-     * @param {number} nutrition value for health
-     * @param {number} perception distance to see object
-     * @returns {Vector2} steer force
-     * @since botch-0.2
-     */
-    eatEnemy (list, nutrition, perception) {
-        let record = Infinity;
-        let closest = null;
-        const stageW = this.target.runtime.constructor.STAGE_WIDTH;
-        const stageH = this.target.runtime.constructor.STAGE_HEIGHT;
-        let esc = 30;
-        
-        for (let f of list.values()) {
-            let en = false;
-            if (f instanceof Enemy) {
+            });
+        } else if (agent.size > 0) { // with enemies
+            for (let f of agent.values()) {
                 f = f.target;
-                en = true;
-                esc = 10;
-            }
-
-            const d = new Vector2(f.x, f.y).dist(new Vector2(this.target.x, this.target.y));
-
-            // If is close to food (eat) change the position if is original
-            // otherwise delete the clone
-            // Easier
-            if (d < esc) { // (this.isTouchingObject(f)) { // there is no isTouchingSprite() with a specific ID
-                if (en) {
-                    this.health -= 0.1;
-                } else {
-                    this.health += nutrition;
-                    if (f.isOriginal) {
-                        f.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
-                    } else {
-                        this.target.runtime.disposeTarget(f);
-                        this.target.runtime.stopForTarget(f);
-                        list.delete(f.id);
-                    }
+                const d = new Vector2(f.x, f.y).dist(new Vector2(this.target.x, this.target.y));
+                if (d < record && d < perception) {
+                    record = d;
+                    closest = f;
                 }
-            } else if (d < record && d < perception) {
-                record = d;
-                closest = f;
             }
         }
 
@@ -286,7 +319,9 @@ class Organism {
      */
     clone () {
         if (Math.random() < 0.002) {
-            return new Organism(this.target, 1, 0.5, this.svgGen.getOrgPoints(), this.dna);
+            const newClone = new Organism(this.target, 1, 0.5, this.svgGen.getOrgPoints(), this.dna);
+            newClone.assignOrgCostume();
+            return newClone;
         }
         return null;
     }
@@ -335,7 +370,6 @@ class Organism {
     update () {
         this.living += 0.001;
         this.health -= 0.005;
-        this.breathe();
         // Update velocity
         this.velocity.add(this.acceleration);
         // Limit speed

@@ -15,7 +15,6 @@ const Organism = require('./organism');
 const svgen = require('./svg-generator');
 const BotchStorageHelper = require('./botch-storage-helper.js');
 const BotchUtil = require('./botchUtil');
-const Enemy = require('./enemy');
 const DEFAULT_BOTCH_SPRITES = require('./default-botch-sprites.js');
 const log = require('../../util/log');
 const md5 = require('js-md5');
@@ -75,6 +74,10 @@ class Scratch3Botch {
             if (this.organismMap && this.organismMap.size > 0) {
                 this.organismMap.entries().next().value[1].target.setVisible(true);
             }
+            this.organismMap = new Map();
+            this.enemiesMap = new Map();
+            this.foodTarget = {};
+            this.poisonTarget = {};
         }));
     }
     
@@ -112,19 +115,9 @@ class Scratch3Botch {
                     }
                 },
                 {
-                    opcode: 'behaviors',
+                    opcode: 'behaveGeneral',
                     blockType: BlockType.COMMAND,
-                    text: 'behave with poison'
-                },
-                {
-                    opcode: 'behaveEnemies',
-                    blockType: BlockType.COMMAND,
-                    text: 'behave with enemies'
-                },
-                {
-                    opcode: 'moveEnemies',
-                    blockType: BlockType.COMMAND,
-                    text: 'move enemies'
+                    text: 'update'
                 },
                 {
                     opcode: 'removeOrganism',
@@ -140,7 +133,7 @@ class Scratch3Botch {
                 {
                     opcode: 'isOrganismDead',
                     blockType: BlockType.BOOLEAN,
-                    text: 'is organism dead?'
+                    text: 'is organism dead (me)?'
                 },
                 {
                     opcode: 'sayBest',
@@ -322,7 +315,7 @@ class Scratch3Botch {
             util.target.goToFront();
             this.enemiesMap = new Map();
             util.target.setVisible(true);
-            const enemy = new Enemy(
+            const enemy = new Organism(
                 util.target, this.mass, this.enemiesMaxForce);
 
             this.enemiesMap.set(util.target.id, enemy);
@@ -344,7 +337,7 @@ class Scratch3Botch {
 
             const org = new Organism(newClone, this.mass, this.maxForce);
             this.organismMap.set(newClone.id, org);
-            
+            org.assignOrgCostume();
             // Place behind the original target.
             newClone.goBehindOther(target);
             // Set a random size
@@ -380,7 +373,7 @@ class Scratch3Botch {
             const stageH = this.runtime.constructor.STAGE_HEIGHT;
             newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
 
-            const en = new Enemy(newClone, this.mass, this.maxForce);
+            const en = new Organism(newClone, this.mass, this.maxForce);
 
             this.enemiesMap.set(newClone.id, en);
         }
@@ -427,35 +420,19 @@ class Scratch3Botch {
     }
 
     /**
-     * Only move the organism randomly
-     * @param {RenderedTarget} target target
-     * @param {string} message message to say
-     * @since botch-0.2
-     */
-    confusion (target, message) {
-        const org = this.organismMap.get(target.id);
-        if (!org.target.isOriginal) { // Only the clones are managed
-            org.boundaries(
-                this.runtime.constructor.STAGE_WIDTH,
-                this.runtime.constructor.STAGE_HEIGHT);
-            org.refreshArgs(this.mass, this.maxForce);
-            org.update();
-            this.runtime.emit('SAY', org.target, 'say', message);
-        }
-    }
-
-    /**
      * Create a food in x, y
      * @param {number} x x coordinate
      * @param {number} y y coordinate
      * @since botch-0.1
      */
     createFoodXY (x, y) {
-        const newClone = this.botchUtil.createClone(this.foodTarget);
-        if (newClone) {
-            this.runtime.addTarget(newClone);
-            newClone.setXY(x, y);
-            newClone.goBehindOther(this.foodTarget);
+        if (this.foodTarget.hasOwnProperty('sprite')) { // if food is defined
+            const newClone = this.botchUtil.createClone(this.foodTarget);
+            if (newClone) {
+                this.runtime.addTarget(newClone);
+                newClone.setXY(x, y);
+                newClone.goBehindOther(this.foodTarget);
+            }
         }
     }
 
@@ -466,126 +443,44 @@ class Scratch3Botch {
      */
 
     /**
-     * Behave with the food and poison
+     * General approach to behave, works with food poison and enemies
      * now this block works with "when I start as a clone", botch-0.2
      * @param {args} args args
      * @param {util} util util
-     * @returns {string} message
-     * @since botch-0.1
-     */
-    behaviors (args, util) {
-        if (this.poisonTarget === {}) {
-            this.confusion(util.target, '?');
-            return 'I need poison';
-        }
-        if (this.foodTarget === {}) {
-            this.confusion(util.target, '?');
-            return 'I need food';
-        }
-
-        // Now I don't have control of this part of code
-        // this because the event is fired only when it start as a clone
-        // an when all the organism die there is no clones
-        if (this.organismMap.size <= 1) {
-            util.target.setVisible(true);
-            this.runtime.stopAll();
-            return 'There is no organism';
-        }
-        const org = this.organismMap.get(util.target.id);
-        if (!org.target.isOriginal) { // Only the clones are managed
-            if (org.health > 0) {
-                org.boundaries(
-                    this.runtime.constructor.STAGE_WIDTH,
-                    this.runtime.constructor.STAGE_HEIGHT);
-                org.refreshArgs(this.mass, this.maxForce);
-                // org.behaviors(this.foodMap, this.poisonMap);
-                org.behaviors(this.foodTarget, this.poisonTarget);
-                org.update();
-
-                const newOrg = org.clone();
-                if (newOrg !== null) {
-                    const newClone = this.botchUtil.createClone(org.target);
-                    if (newClone) {
-                        this.runtime.addTarget(newClone);
-                        newClone.clearEffects();
-                        newOrg.target = newClone;
-                    }
-                    this.organismMap.set(newClone.id, newOrg);
-                }
-            }
-
-            if (org.dead()) {
-                this.runtime._hats.botch_isDeadHat.edgeActivated = false;
-                this.runtime.startHats('botch_isDeadHat', null, org.target);
-            }
-            /* if (org.dead()) {
-                if (org.deathAnimation(util)) { // wait the end of animation
-                    // this.runtime.disposeTarget(org.target);
-                    // this.runtime.stopForTarget(org.target);
-                    // this.organismMap.delete(org.target.id);
-
-                    // when an organism die, it will drop a food
-                    // this.createFoodXY(org.target.x, org.target.y);
-                }
-            } */
-        }
-    }
-
-    /**
-     * Behave with non static sprite (enemies)
-     * this block works with "when I start as a clone"
-     * @param {args} args args
-     * @param {util} util util
-     * @return {string} message
      * @since botch-0.2
      */
-    behaveEnemies (args, util) {
-        if (this.foodTarget === {}) {
-            this.confusion(util.target, '?');
-            return 'I need food';
-        }
+    behaveGeneral (args, util) {
+        // check if its an organism or an enemy
+        if (this.organismMap.size > 0 && this.organismMap.get(util.target.id)) {
+            const org = this.organismMap.get(util.target.id);
+            if (!org.target.isOriginal) { // Only the clones are managed
+                if (org.health > 0) {
+                    org.stepOrganism(this.foodTarget, this.poisonTarget, this.enemiesMap);
 
-        if (this.organismMap.size <= 1) {
-            util.target.setVisible(true);
-            this.runtime.stopAll();
-            return 'There is no organism';
-        }
-        const org = this.organismMap.get(util.target.id);
-        if (!org.target.isOriginal) { // Only the clones are managed
-            if (org.health > 0) {
-                org.boundaries(
-                    this.runtime.constructor.STAGE_WIDTH,
-                    this.runtime.constructor.STAGE_HEIGHT);
-                org.refreshArgs(this.mass, this.maxForce);
-                org.behaviourEnemy(this.foodTarget, this.enemiesMap);
-                org.update();
-
-                const newOrg = org.clone();
-                if (newOrg !== null) {
-                    const newClone = this.botchUtil.createClone(org.target);
-                    if (newClone) {
-                        this.runtime.addTarget(newClone);
-                        newClone.clearEffects();
-                        newOrg.target = newClone;
+                    const newOrg = org.clone();
+                    if (newOrg !== null) {
+                        const newClone = this.botchUtil.createClone(org.target);
+                        if (newClone) {
+                            this.runtime.addTarget(newClone);
+                            newClone.clearEffects();
+                            newOrg.target = newClone;
+                        }
+                        this.organismMap.set(newClone.id, newOrg);
                     }
-                    this.organismMap.set(newClone.id, newOrg);
                 }
-            }
 
-            if (org.dead()) {
-                this.runtime._hats.botch_isDeadHat.edgeActivated = false;
-                this.runtime.startHats('botch_isDeadHat', null, org.target);
-            }
-            /* if (org.dead()) {
-                if (org.deathAnimation(util)) { // wait the end of animation
-                    // this.runtime.disposeTarget(org.target);
-                    // this.runtime.stopForTarget(org.target);
-                    // this.organismMap.delete(org.target.id);
-
-                    // when an organism die, it will drop a food
+                if (org.dead()) {
                     // this.createFoodXY(org.target.x, org.target.y);
+                    this.runtime._hats.botch_isDeadHat.edgeActivated = false;
+                    this.runtime.startHats(
+                        'botch_isDeadHat', null, org.target); // TO DO probebilmente è meglio mettere l'animazione
                 }
-            } */
+            }
+        } else if (this.enemiesMap.size > 0 && this.enemiesMap.get(util.target.id)) {
+            const enemy = this.enemiesMap.get(util.target.id);
+            if (enemy) {
+                enemy.stepEnemy(this.organismMap);
+            }
         }
     }
 
@@ -647,6 +542,7 @@ class Scratch3Botch {
             zip.file(currFileDesc.fileName, currFileDesc.fileContent);
         }
     }
+
     /**  Copied from virtual-machine.js
      *
       * Exports a sprite in the sprite3 format.
@@ -905,28 +801,6 @@ class Scratch3Botch {
                 });
             });
         });
-    }
-
-    /**
-     * Update the enemies position and behave with the environment
-     * @param {args} args args
-     * @param {util} util util
-     * @returns {string} error message
-     * @since botch-0.2
-     */
-    moveEnemies (args, util) {
-        if (this.organismMap.size < 1) {
-            return 'There is no organism';
-        }
-        const enemy = this.enemiesMap.get(util.target.id);
-        if (enemy) {
-            enemy.boundaries(
-                this.runtime.constructor.STAGE_WIDTH - 150,
-                this.runtime.constructor.STAGE_HEIGHT - 150);
-            enemy.refreshArgs(this.mass, this.enemiesMaxForce);
-            enemy.behaviors(this.organismMap);
-            enemy.update();
-        }
     }
 
     /**
