@@ -275,11 +275,11 @@ class Scratch3Botch {
             // change the costume of the original sprite
             const newSvg = new svgen(130, 130).generateOrgSVG(100, org.dna[0], org.dna[1], 5);
             org.svg = newSvg;
+            // org.assignOrgCostume();
 
             this.organismMap.set(util.target.id, org);
 
             util.target.setVisible(true);
-            // this.uploadCostumeEdit(newSvg, util.target.id); // for now it will not assign a costume to the original
         }
         if (args.TYPE === 'food') {
             this.botchUtil.deleteClones(util.target.id);
@@ -319,6 +319,7 @@ class Scratch3Botch {
                 util.target, this.mass, this.enemiesMaxForce);
 
             this.enemiesMap.set(util.target.id, enemy);
+            enemy.assignEnemyCostume();
         }
     }
 
@@ -337,6 +338,7 @@ class Scratch3Botch {
 
             const org = new Organism(newClone, this.mass, this.maxForce);
             this.organismMap.set(newClone.id, org);
+            org.setParentVariable();
             org.assignOrgCostume();
             // Place behind the original target.
             newClone.goBehindOther(target);
@@ -351,6 +353,7 @@ class Scratch3Botch {
                 const stageH = this.runtime.constructor.STAGE_HEIGHT;
                 newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
             }
+            this.storeSprite(newClone.id);
         }
     }
 
@@ -365,6 +368,10 @@ class Scratch3Botch {
             newClone.setVisible(true);
             this.runtime.addTarget(newClone);
 
+            const en = new Organism(newClone, this.mass, this.maxForce);
+            this.enemiesMap.set(newClone.id, en);
+            en.assignEnemyCostume();
+
             // Place behind the original target.
             newClone.goBehindOther(target);
 
@@ -372,10 +379,6 @@ class Scratch3Botch {
             const stageW = this.runtime.constructor.STAGE_WIDTH;
             const stageH = this.runtime.constructor.STAGE_HEIGHT;
             newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
-
-            const en = new Organism(newClone, this.mass, this.maxForce);
-
-            this.enemiesMap.set(newClone.id, en);
         }
     }
 
@@ -458,14 +461,16 @@ class Scratch3Botch {
                     org.stepOrganism(this.foodTarget, this.poisonTarget, this.enemiesMap);
 
                     const newOrg = org.clone();
-                    if (newOrg !== null) {
+                    if (newOrg !== null) { // if it create a child
                         const newClone = this.botchUtil.createClone(org.target);
                         if (newClone) {
                             this.runtime.addTarget(newClone);
                             newClone.clearEffects();
-                            newOrg.target = newClone;
+                            newOrg.target = newClone; // assign the new target to new organism
                         }
+                        newOrg.setParentVariable(org.target.id);
                         this.organismMap.set(newClone.id, newOrg);
+                        this.storeSprite(newClone.id);
                     }
                 }
 

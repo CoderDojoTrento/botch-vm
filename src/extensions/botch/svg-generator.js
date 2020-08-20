@@ -1,6 +1,5 @@
 const Vector2 = require('./vector2');
 const MathUtil = require('../../util/math-util');
-const Organism = require('./organism');
 
 class SVGgen {
     /**
@@ -16,7 +15,7 @@ class SVGgen {
         this.color = color;
         this.points = [];
         this.strokeWidth = 4;
-
+        this.svg = ''; // the svg string
         this.svgPoints = [];
         this.controlPoints = [];
     }
@@ -84,6 +83,12 @@ class SVGgen {
     getOrgPoints () {
         return [this.svgPoints, this.controlPoints];
     }
+
+    // <COMPUTE THE AREA METHODS>
+
+    // https://stackoverflow.com/questions/10039679/how-can-i-calculate-the-area-of-a-bezier-curve#10045537
+
+    // </COMPUTE THE AREA METHODS>
 
     /**
      * Generate an SVG using quadratic bezier curve
@@ -194,7 +199,7 @@ class SVGgen {
         this.svgPoints = [p1, p2, p3, p4];
         this.controlPoints = [c1, c2, c3, c4];
         
-        return `<svg height="${this.height}" width="${this.width}" viewBox="0 0 ${this.width} ${this.height}" version="1.1" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">` +
+        this.svg = `<svg height="${this.height}" width="${this.width}" viewBox="0 0 ${this.width} ${this.height}" version="1.1" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">` +
                     `<radialGradient id="RadialGradient1" ` +
                     `cx="${this.width / 2}" cy="${this.height / 2}" r="${this.width / 3}" ` +
                     `gradientUnits="userSpaceOnUse"> ` +
@@ -221,6 +226,16 @@ class SVGgen {
                     `<circle cx="${p3.x}" cy="${p3.y}" ` +
                     `r="${p}" stroke="none" stroke-width="1" fill="url(#RadialGradient3)" />` +
                 `</svg>`;
+
+        return this.svg;
+    }
+
+    generateEnemySvg (dim) {
+        return `<svg height="${dim}" width="${dim}" viewBox="0 0 ${dim} ${dim}" version="1.1" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"> ` +
+        `<polygon points="4,4 4,${dim - 3}, ${dim - 3},${dim / 2}" ` +
+            `fill="${this.color}" stroke="black" stroke-width="3" /> ` +
+        `<circle cx="${dim - 5}" cy="${dim / 2}" r="4" stroke="black" stroke-width="2" fill="black" /> ` +
+        `</svg>`;
     }
 
     /**

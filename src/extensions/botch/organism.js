@@ -23,7 +23,7 @@ class Organism {
      * @param {string} svgPoints_  svg points of the organism
      * @param {Array} dna_ dna
      */
-    constructor (target_, mass_ = 1, maxForce_ = 0.5, svgPoints_, dna_,) {
+    constructor (target_, mass_ = 1, maxForce_ = 0.5, svgPoints_, dna_) {
         // utils
         this.target = target_;
         this.renderer = this.target.renderer;
@@ -91,15 +91,17 @@ class Organism {
 
         // Variable assignment to the sprite
         // each clone has the its own dna saved and the dna of the non-clone target
-        this.target.lookupOrCreateList(this.target.id, `dna_${this.target.id}`);
+        /* this.target.lookupOrCreateList(this.target.id, `dna_${this.target.id}`);
         const list = this.target.lookupOrCreateList(
             this.target.id, `dna_${this.target.id}`);
         this.dna.forEach(element => {
             list.value.push(element);
         });
-        list._monitorUpToDate = false;
-    }
+        list._monitorUpToDate = false; */
 
+        this.target.lookupOrCreateVariable('botch_parent', 'parent');
+    }
+    
     /**
      * Compute the step needed to move
      * @param {RenderedTarget} foodTarget foodTarget
@@ -143,7 +145,8 @@ class Organism {
      * assign a new generated enemy costume to the target
      */
     assignEnemyCostume () {
-        // TODO
+        this.svg = this.svgGen.generateEnemySvg(50);
+        this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
     }
 
     /**
@@ -319,9 +322,9 @@ class Organism {
      */
     clone () {
         if (Math.random() < 0.002) {
-            const newClone = new Organism(this.target, 1, 0.5, this.svgGen.getOrgPoints(), this.dna);
-            newClone.assignOrgCostume();
-            return newClone;
+            const newOrg = new Organism(this.target, 1, 0.5, this.svgGen.getOrgPoints(), this.dna);
+            newOrg.assignOrgCostume();
+            return newOrg;
         }
         return null;
     }
@@ -484,6 +487,24 @@ class Organism {
                 return true;
             }
             util.yield();
+        }
+    }
+
+    /**
+     * Set the variable parent to the target
+     * if parent is not defined the parent will be parent_0
+     * @param {string} parent parent id (who have made it)
+     * @since botch-0.2
+     */
+    setParentVariable (parent) {
+        if (parent) {
+            const botchParent = 'botch_parent';
+            this.target.variables[botchParent].value = parent;
+            // this.target.lookupOrCreateVariable(this.target.id, `parent_${parent}`);
+        } else { // if there is no parent defined (eg the first generation)
+            // this.target.lookupOrCreateVariable(this.target.id, `parent_0`);
+            const botchParent = 'botch_parent';
+            this.target.variables[botchParent].value = 'parent_0';
         }
     }
 
