@@ -203,7 +203,7 @@ class Scratch3Botch {
      * @since botch-0.2
      */
     static get STATE_KEY () {
-        return 'Scratch.botch';
+        return 'Botch.state';
     }
 
     /**
@@ -550,10 +550,12 @@ class Scratch3Botch {
                 }
 
                 if (org.dead()) {
+                    if (org.deadSignal()) {
                     // this.createFoodXY(org.target.x, org.target.y);
-                    this.runtime._hats.botch_isDeadHat.edgeActivated = false;
-                    this.runtime.startHats(
-                        'botch_isDeadHat', null, org.target); // TO DO probebilmente è meglio mettere l'animazione
+                        this.runtime._hats.botch_isDeadHat.edgeActivated = false;
+                        this.runtime.startHats(
+                            'botch_isDeadHat', null, org.target); // TO DO probebilmente è meglio mettere l'animazione
+                    }
                 }
             }
         } else if (this.enemiesMap.size > 0 && this.enemiesMap.get(util.target.id)) {

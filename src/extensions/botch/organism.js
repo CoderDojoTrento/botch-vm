@@ -43,6 +43,7 @@ class Organism {
         this.health = 1;
         this.mr = 0.01;
         this.living = 0;
+        this.isDeadTick = 0;
         this.effectStep = 7;
         this.currEffectStep = this.effectStep;
         this.effectSign = 1;
@@ -173,7 +174,7 @@ class Organism {
         if (this.runtime.targets.length > 0) {
             return this.runtime.targets.filter(t => {
                 if (!t.isStage) {
-                    const state = t.getCustomState('Scratch.botch');
+                    const state = t.getCustomState('Botch.state');
                     if (state && state.type === 'food') {
                         return true;
                     }
@@ -192,7 +193,7 @@ class Organism {
         if (this.runtime.targets.length > 0) {
             return this.runtime.targets.filter(t => {
                 if (!t.isStage) {
-                    const state = t.getCustomState('Scratch.botch');
+                    const state = t.getCustomState('Botch.state');
                     if (state && state.type === 'poison') {
                         return true;
                     }
@@ -367,7 +368,19 @@ class Organism {
      * @since botch-0.1
      */
     dead () {
-        return (this.health < 0);
+        if (this.health < 0) {
+            this.isDeadTick++;
+            return true;
+        }
+    }
+
+    /**
+     * Returns only once, when an organism is dead
+     * @returns {boolean} true if is dead
+     * @since botch-0.2
+     */
+    deadSignal () {
+        return this.isDeadTick === 1;
     }
     
     /**
