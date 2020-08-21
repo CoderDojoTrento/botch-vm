@@ -13,8 +13,9 @@ const BlockType = require('../../extension-support/block-type');
 const Cast = require('../../util/cast');
 const Organism = require('./organism');
 const svgen = require('./svg-generator');
+const Clone = require('../../util/clone');
 const BotchStorageHelper = require('./botch-storage-helper.js');
-const BotchUtil = require('./botchUtil');
+const BotchUtil = require('./botch_util');
 const DEFAULT_BOTCH_SPRITES = require('./default-botch-sprites.js');
 const log = require('../../util/log');
 const md5 = require('js-md5');
@@ -30,9 +31,6 @@ class Scratch3Botch {
         // map that contains the organism <id, org> or enemies
         this.organismMap = new Map();
         this.enemiesMap = new Map();
-        // the target that represent the food or poison
-        this.foodTarget = {};
-        this.poisonTarget = {};
         // default option for the new organism
         this.maxForce = 0.5;
         this.enemiesMaxForce = 0.3;
@@ -76,9 +74,18 @@ class Scratch3Botch {
             }
             this.organismMap = new Map();
             this.enemiesMap = new Map();
-            this.foodTarget = {};
-            this.poisonTarget = {};
+
+            // check if needed
+            this.runtime.targets.forEach(element => {
+                if (!element.isStage) {
+                    element._customState = {};
+                }
+            });
         }));
+
+        // copy the custom state when clone
+        this._onTargetCreated = this._onTargetCreated.bind(this);
+        this.runtime.on('targetWasCreated', this._onTargetCreated);
     }
     
     getInfo () {
@@ -190,6 +197,94 @@ class Scratch3Botch {
         };
     }
 
+    /**
+     * The key to load & store a target's botch-related state.
+     * @type {string}
+     * @since botch-0.2
+     */
+    static get STATE_KEY () {
+        return 'Scratch.botch';
+    }
+
+    /**
+     * The default botch-related state, to be used when a target has no existing botch state.
+     * @type {MusicState}
+     * @return {BotchState} the default state
+     * @since botch-0-2
+     */
+    static get DEFAULT_BOTCH_STATE () {
+        return {
+            type: 'undefined'
+        };
+    }
+
+    /**
+     * Food type
+     * @return {string} food type
+     * @since botch-0-2
+     */
+    static get FOOD_TYPE () {
+        return 'food';
+    }
+
+    /**
+     * Poison type
+     * @return {string} poison type
+     * @since botch-0-2
+     */
+    static get POISON_TYPE () {
+        return 'poison';
+    }
+
+    /**
+     * Organism type
+     * @return {string} organism type
+     * @since botch-0-2
+     */
+    static get ORGANISM_TYPE () {
+        return 'organism';
+    }
+
+    /**
+     * Poison type
+     * @return {string} poison type
+     * @since botch-0-2
+     */
+    static get ENEMY_TYPE () {
+        return 'enemy';
+    }
+
+    /**
+     * @param {Target} target - collect botch state for this target.
+     * @returns {BotchState} the mutable botch state associated with that target. This will be created if necessary.
+     * @since botch-0.2
+     */
+    getBotchState (target) {
+        let botchState = target.getCustomState(Scratch3Botch.STATE_KEY);
+        if (!botchState) {
+            botchState = Clone.simple(Scratch3Botch.DEFAULT_BOTCH_STATE);
+            target.setCustomState(Scratch3Botch.STATE_KEY, botchState);
+        }
+        return botchState;
+    }
+
+    /**
+     * When a botch-target Target is cloned, clone the botch state.
+     * @param {Target} newTarget - the newly created target.
+     * @param {Target} [sourceTarget] - the target used as a source for the new clone, if any.
+     * @listens Runtime#event:targetWasCreated
+     * @private
+     * @since botch-0.2
+     */
+    _onTargetCreated (newTarget, sourceTarget) {
+        if (sourceTarget) {
+            const botchState = sourceTarget.getCustomState(Scratch3Botch.STATE_KEY);
+            if (botchState) {
+                newTarget.setCustomState(Scratch3Botch.STATE_KEY, Clone.simple(botchState));
+            }
+        }
+    }
+
     getSpriteMenu () {
         if (this.runtime.targets.length > 1) {
             return this.runtime.targets.filter(t => t.isOriginal && !t.isStage).map(t => t.getName());
@@ -216,21 +311,6 @@ class Scratch3Botch {
         if (this.enemiesMap.size > 0 &&
             this.enemiesMap.entries().next().value[0] === id) {
             this.enemiesMap = new Map();
-        }
-    }
-
-    /**
-     * Check if the foodTarget or poisonTarget are already defined
-     * and if true, reinitialize it
-     * @param {string} id target id
-     * @since botch-0.2
-     */
-    checkTarget (id) {
-        if (this.foodTarget.id === id) {
-            this.foodTarget = {};
-        }
-        if (this.poisonTarget === id) {
-            this.poisonTarget = {};
         }
     }
     
@@ -264,7 +344,6 @@ class Scratch3Botch {
                 util.target.id === this.enemiesMap.entries().next().value[0]) {
                 this.enemiesMap = new Map();
             }
-            this.checkTarget(util.target.id);
 
             util.target.goToFront();
             this.organismMap = new Map();
@@ -283,25 +362,17 @@ class Scratch3Botch {
         }
         if (args.TYPE === 'food') {
             this.botchUtil.deleteClones(util.target.id);
-            // check if it is already assigned somewhere
-            if (this.poisonTarget.id === util.target.id) {
-                this.poisonTarget = {};
-            }
-            this.checkMap(util.target.id);
-
             util.target.setVisible(true);
-            this.foodTarget = util.target;
+
+            const state = this.getBotchState(util.target);
+            state.type = Scratch3Botch.FOOD_TYPE;
         }
         if (args.TYPE === 'poison') {
             this.botchUtil.deleteClones(util.target.id);
-            // check if it is already assigned somewhere
-            if (this.foodTarget.id === util.target.id) {
-                this.foodTarget = {};
-            }
-            this.checkMap(util.target.id);
-
             util.target.setVisible(true);
-            this.poisonTarget = util.target;
+
+            const state = this.getBotchState(util.target);
+            state.type = Scratch3Botch.POISON_TYPE;
         }
         if (args.TYPE === 'enemy') {
             this.botchUtil.deleteClones(util.target.id);
@@ -310,13 +381,15 @@ class Scratch3Botch {
                 util.target.id === this.organismMap.entries().next().value[0]) {
                 this.organismMap = new Map();
             }
-            this.checkTarget(util.target.id);
 
             util.target.goToFront();
             this.enemiesMap = new Map();
             util.target.setVisible(true);
             const enemy = new Organism(
                 util.target, this.mass, this.enemiesMaxForce);
+            
+            const state = this.getBotchState(util.target);
+            state.type = Scratch3Botch.ENEMY_TYPE;
 
             this.enemiesMap.set(util.target.id, enemy);
             enemy.assignEnemyCostume();
@@ -353,7 +426,8 @@ class Scratch3Botch {
                 const stageH = this.runtime.constructor.STAGE_HEIGHT;
                 newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
             }
-            this.storeSprite(newClone.id);
+            const p = this.storeSprite(newClone.id);
+            newClone.setCustomState('storedMd5', p.md5);
         }
     }
 
@@ -458,7 +532,7 @@ class Scratch3Botch {
             const org = this.organismMap.get(util.target.id);
             if (!org.target.isOriginal) { // Only the clones are managed
                 if (org.health > 0) {
-                    org.stepOrganism(this.foodTarget, this.poisonTarget, this.enemiesMap);
+                    org.stepOrganism(this.enemiesMap);
 
                     const newOrg = org.clone();
                     if (newOrg !== null) { // if it create a child
@@ -468,9 +542,10 @@ class Scratch3Botch {
                             newClone.clearEffects();
                             newOrg.target = newClone; // assign the new target to new organism
                         }
-                        newOrg.setParentVariable(org.target.id);
+                        const p = this.storeSprite(newClone.id);
+                        newClone.setCustomState('storedMd5', p.md5);
+                        newOrg.setParentVariable(org.target.getCustomState('storedMd5'));
                         this.organismMap.set(newClone.id, newOrg);
-                        this.storeSprite(newClone.id);
                     }
                 }
 

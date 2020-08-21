@@ -9,7 +9,7 @@ if (typeof TextEncoder === 'undefined') {
 const Vector2 = require('./vector2');
 const MathUtil = require('../../util/math-util');
 const svgen = require('./svg-generator');
-const BotchUtil = require('./botchUtil');
+const BotchUtil = require('./botch_util');
 
 /**
  * @since botch-0.1
@@ -104,17 +104,15 @@ class Organism {
     
     /**
      * Compute the step needed to move
-     * @param {RenderedTarget} foodTarget foodTarget
-     * @param {RenderedTarget} poisonTarget poisonTarget
      * @param {Map} enemiesMap enemiesMap
      * @since botch-0.2
      */
-    stepOrganism (foodTarget, poisonTarget, enemiesMap) {
+    stepOrganism (enemiesMap) {
         this.boundaries(
             this.runtime.constructor.STAGE_WIDTH,
             this.runtime.constructor.STAGE_HEIGHT);
         this.refreshArgs(this.mass, this.maxForce);
-        this.behaveGeneralOrganism(foodTarget, poisonTarget, enemiesMap);
+        this.behaveGeneralOrganism(enemiesMap);
         this.update();
         this.breathe();
     }
@@ -167,25 +165,59 @@ class Organism {
     }
 
     /**
+     * Get all the food target
+     * @returns {Array} food targets
+     * @since botch-0.2
+     */
+    getFoodTarget () {
+        if (this.runtime.targets.length > 0) {
+            return this.runtime.targets.filter(t => {
+                if (!t.isStage) {
+                    const state = t.getCustomState('Scratch.botch');
+                    if (state && state.type === 'food') {
+                        return true;
+                    }
+                }
+                return false;
+            });
+        }
+    }
+
+    /**
+     * Get all the poison target
+     * @returns {Array} poison targets
+     * @since botch-0.2
+     */
+    getPoisonTarget () {
+        if (this.runtime.targets.length > 0) {
+            return this.runtime.targets.filter(t => {
+                if (!t.isStage) {
+                    const state = t.getCustomState('Scratch.botch');
+                    if (state && state.type === 'poison') {
+                        return true;
+                    }
+                }
+                return false;
+            });
+        }
+    }
+
+    /**
      * General behaviour for organism
-     * @param {RenderedTarget} foodTarget foodTarget
-     * @param {RenderedTarget} poisonTarget poisonTarget
      * @param {Map<string, Organism>} enemiesMap enemies map
      * @since botch-0.2
      */
-    behaveGeneralOrganism (foodTarget, poisonTarget, enemiesMap) {
+    behaveGeneralOrganism (enemiesMap) {
         let steerG = new Vector2(0, 0);
         let steerB = new Vector2(0, 0);
         let steerE = new Vector2(0, 0);
-        if (foodTarget.hasOwnProperty('sprite')) {
-            steerG = this.eatGeneral(foodTarget, 0.2, this.dna[2]);
-        }
-        if (poisonTarget.hasOwnProperty('sprite')) {
-            steerB = this.eatGeneral(poisonTarget, -0.5, this.dna[3]);
-        }
+        steerG = this.eatGeneral(this.getFoodTarget(), 0.2, this.dna[2]);
+        steerB = this.eatGeneral(this.getPoisonTarget(), -0.5, this.dna[3]);
+
         if (enemiesMap && enemiesMap.size > 0) {
             steerE = this.eatGeneral(enemiesMap, 0, this.dna[4]);
         }
+
         steerG.mult(this.dna[0]);
         steerB.mult(this.dna[1]);
         steerE.mult(this.dna[5]);
@@ -257,10 +289,10 @@ class Organism {
         const stageH = this.target.runtime.constructor.STAGE_HEIGHT;
         const esc = 30;
 
-        if (agent.hasOwnProperty('sprite')) { // with food and poison
+        if (agent.length > 0 && agent[0].hasOwnProperty('sprite')) { // with food and poison
             // get all the clones
-            const all = agent.sprite.clones;
-            all.forEach(element => {
+            // const all = agent.sprite.clones;
+            agent.forEach(element => {
                 const d = new Vector2(element.x, element.y).dist(new Vector2(this.target.x, this.target.y));
     
                 // If is close to food (eat) change the position if is original
