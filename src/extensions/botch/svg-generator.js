@@ -235,7 +235,7 @@ class SVGgen {
                     `<stop offset="1" style="stop-color:${this.colorLuminance(this.color, 0.9)}"></stop> ` +
                     `</radialGradient>` +
                     `<path d="M ${p1.x} ${p1.y} Q ${c1.x} ${c1.y} ${p2.x} ${p2.y} Q ${c2.x} ${c2.y} ${p3.x} ${p3.y} ` +
-                    `Q ${c3.x} ${c3.y} ${p4.x} ${p4.y} Q ${c4.x} ${c4.y} ${p1.x} ${p1.y}" ` +
+                    `Q ${c3.x} ${c3.y} ${p4.x} ${p4.y} Q ${c4.x} ${c4.y} ${p1.x} ${p1.y} Z" ` +
                     `fill="url(#RadialGradient1)" stroke="none" stroke-width="1" />` +
                     `<circle cx="${p2.x}" cy="${p2.y}" ` + // food
                     `r="${f}" stroke="none" stroke-width="1" fill="url(#RadialGradient2)" />` +
@@ -293,6 +293,43 @@ class SVGgen {
                 p.y = p.y + dy;
             });
         }
+    }
+
+    /**
+     * Calculate the area of a polygon
+     * https://stackoverflow.com/questions/16285134/calculating-polygon-area
+     * @param {Array} vertices vertices of all the polygon svg
+     * @returns {number} area of the polygon
+     * @since botch-0.2
+     */
+    calcOrgArea (vertices) {
+        let total = 0;
+    
+        for (let i = 0, l = vertices.length; i < l; i++) {
+            const addX = vertices[i].x;
+            const addY = vertices[i === vertices.length - 1 ? 0 : i + 1].y;
+            const subX = vertices[i === vertices.length - 1 ? 0 : i + 1].x;
+            const subY = vertices[i].y;
+    
+            total += (addX * addY * 0.5);
+            total -= (subX * subY * 0.5);
+        }
+    
+        return Math.abs(total);
+    }
+
+    /**
+     * Calculate the area of the org svg
+     * @returns {number} area of the org svg
+     * @since botch-0.2
+     */
+    calcOrgMass () {
+        const vertices = [];
+        for (let i = 0, k = 0; i < this.svgOrgPoints.length; i++, k += 2) {
+            vertices[k] = this.svgOrgPoints[i];
+            vertices[k + 1] = this.controlOrgPoints[i];
+        }
+        return this.calcOrgArea(this.svgOrgPoints);
     }
 
     /**

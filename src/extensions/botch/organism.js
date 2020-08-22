@@ -51,6 +51,8 @@ class Organism {
         this.versionName = '';
         this.max_att = 5;
         this.max_perception = 150;
+        this.currentName = '';
+        this.childNumber = 0;
         this.dna = [];
 
         if (dna_) {
@@ -90,6 +92,10 @@ class Organism {
             this.svg = this.svgGen.generateOrgSVG(100, this.dna[0], this.dna[1], this.max_att, svgPoints_, mutation);
             this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
         }
+        
+        // values found empirically
+        this.area = this.svgGen.calcOrgMass();
+        // this.health = MathUtil.scale(this.area, 2000, (this.svgGen.width) ** 2, 1, 3);
 
         // Variable assignment to the sprite
         // each clone has the its own dna saved and the dna of the non-clone target
@@ -139,6 +145,8 @@ class Organism {
     assignOrgCostume () {
         this.svg = this.svgGen.generateOrgSVG(100, this.dna[0], this.dna[1], this.max_att);
         this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
+        this.area = this.svgGen.calcOrgMass();
+        // this.health = MathUtil.scale(this.area, 2000, (this.svgGen.width) ** 2, 1, 3);
     }
 
     /**

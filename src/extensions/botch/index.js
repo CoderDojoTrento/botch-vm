@@ -38,6 +38,7 @@ class Scratch3Botch {
         this.mass = 1;
         // utils
         this.botchUtil = new BotchUtil(this.runtime);
+        this.currentOrgCounter = 0;
         
         // since that the project is loaded at the startup
         // for some reasons the storage is not already defined and it needs to
@@ -75,7 +76,7 @@ class Scratch3Botch {
             }
             this.organismMap = new Map();
             this.enemiesMap = new Map();
-
+            this.currentOrgCounter = 0;
             // check if needed
             this.runtime.targets.forEach(element => {
                 if (!element.isStage) {
@@ -338,6 +339,10 @@ class Scratch3Botch {
             org.svg = newSvg;
             // org.assignOrgCostume();
             org.setParentVariable();
+            this.currentOrgCounter++;
+            org.currentName = this.currentOrgCounter.toString();
+            const p = this.storeSprite(util.target.id, org.currentName);
+            util.target.setCustomState('storedMd5', p.md5);
             this.organismMap.set(util.target.id, org);
 
             util.target.setVisible(true);
@@ -411,7 +416,9 @@ class Scratch3Botch {
                 const stageH = this.runtime.constructor.STAGE_HEIGHT;
                 newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
             }
-            const p = this.storeSprite(newClone.id);
+            this.currentOrgCounter++;
+            org.currentName = this.currentOrgCounter.toString();
+            const p = this.storeSprite(newClone.id, org.currentName);
             newClone.setCustomState('storedMd5', p.md5);
         }
     }
@@ -549,7 +556,9 @@ class Scratch3Botch {
                         newClone.clearEffects();
                         newOrg.target = newClone; // assign the new target to new organism
                     }
-                    const p = this.storeSprite(newClone.id);
+                    org.childNumber++;
+                    newOrg.currentName = `${org.currentName}.${org.childNumber}`;
+                    const p = this.storeSprite(newClone.id, newOrg.currentName);
                     newClone.setCustomState('storedMd5', p.md5);
                     newOrg.setParentVariable(org.target.getCustomState('storedMd5'));
                     this.organismMap.set(newClone.id, newOrg);
