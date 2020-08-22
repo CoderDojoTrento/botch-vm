@@ -355,7 +355,7 @@ class Scratch3Botch {
             const newSvg = new svgen(130, 130).generateOrgSVG(100, org.dna[0], org.dna[1], 5);
             org.svg = newSvg;
             // org.assignOrgCostume();
-
+            org.setParentVariable();
             this.organismMap.set(util.target.id, org);
 
             util.target.setVisible(true);
