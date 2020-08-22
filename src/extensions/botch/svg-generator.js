@@ -16,8 +16,8 @@ class SVGgen {
         this.points = [];
         this.strokeWidth = 4;
         this.svg = ''; // the svg string
-        this.svgPoints = [];
-        this.controlPoints = [];
+        this.svgOrgPoints = [];
+        this.controlOrgPoints = [];
     }
 
     rdn (min, max) {
@@ -81,7 +81,10 @@ class SVGgen {
      * @since botch-0.2
      */
     getOrgPoints () {
-        return [this.svgPoints, this.controlPoints];
+        if (this.svgOrgPoints.length > 0) {
+            return [this.svgOrgPoints, this.controlOrgPoints];
+        }
+        return null;
     }
 
     // <COMPUTE THE AREA METHODS>
@@ -102,11 +105,12 @@ class SVGgen {
      * @param {number} poisonR poison attraction
      * @param {number} mag max poison or food attraction
      * @param {Array} parentPoints the points of the parent
+     * @param {number} mutation how the organism svg will be different
      * @returns {string} the svg
      * @since botch-0.2
      * fa piuttosto schifo da vedere come funzione...
      */
-    generateOrgSVG (dim, foodR, poisonR, mag, parentPoints) {
+    generateOrgSVG (dim, foodR, poisonR, mag, parentPoints, mutation) {
         const f = MathUtil.scale(foodR, -mag, mag, 0, 15);
         const p = MathUtil.scale(poisonR, -mag, mag, 0, 15);
 
@@ -118,50 +122,60 @@ class SVGgen {
         const w1 = (this.width / 2) - margin;
         const w2 = (this.width / 2) + margin;
         // the new points differ by -min +max from the parent point
-        const min = -10;
-        const max = 10;
+        const mutQuantity = MathUtil.scale(mutation, 0, 100, 0, 15);
         let p1; let p2; let p3; let p4; let c1; let c2; let c3; let c4;
 
         if (parentPoints) {
+            if (mutQuantity > 0) {
             // generate the 4 points on the diagonal
-            const ta = MathUtil.clamp(
-                parentPoints[0][0].x + Math.floor(this.rdn(min, max)), 0, w1);
-            p1 = new Vector2(ta, ta);
+                const ta = MathUtil.clamp(
+                    parentPoints[0][0].x + Math.floor(this.rdn(-mutQuantity, mutQuantity)), 0, w1);
+                p1 = new Vector2(ta, ta);
  
-            const tb = MathUtil.clamp(
-                parentPoints[0][1].x + Math.floor(this.rdn(min, max)), w2, this.width - margin);
-            p2 = new Vector2(tb, -tb + this.height);
+                const tb = MathUtil.clamp(
+                    parentPoints[0][1].x + Math.floor(this.rdn(-mutQuantity, mutQuantity)), w2, this.width - margin);
+                p2 = new Vector2(tb, -tb + this.height);
             
-            const tc = MathUtil.clamp(
-                parentPoints[0][2].x + Math.floor(this.rdn(min, max)), w2, this.width - margin);
-            p3 = new Vector2(tc, tc);
+                const tc = MathUtil.clamp(
+                    parentPoints[0][2].x + Math.floor(this.rdn(-mutQuantity, mutQuantity)), w2, this.width - margin);
+                p3 = new Vector2(tc, tc);
  
-            const td = MathUtil.clamp(
-                parentPoints[0][3].x + Math.floor(this.rdn(min, max)), 0, w1);
-            p4 = new Vector2(td, -td + this.height);
+                const td = MathUtil.clamp(
+                    parentPoints[0][3].x + Math.floor(this.rdn(-mutQuantity, mutQuantity)), 0, w1);
+                p4 = new Vector2(td, -td + this.height);
 
-            // generate the 4 control points
-            const va = MathUtil.clamp(
-                parentPoints[1][0].x + Math.floor(this.rdn(min, max)), 0, this.width);
-            const v2a = va < this.width / 2 ?
-                Math.floor(this.rdn(0, va)) : Math.floor(this.rdn(0, -va + this.height));
-            c1 = new Vector2(va, v2a);
+                // generate the 4 control points
+                const va = MathUtil.clamp(
+                    parentPoints[1][0].x + Math.floor(this.rdn(-mutQuantity, mutQuantity)), 0, this.width);
+                const v2a = va < this.width / 2 ?
+                    Math.floor(this.rdn(0, va)) : Math.floor(this.rdn(0, -va + this.height));
+                c1 = new Vector2(va, v2a);
 
-            const vb = MathUtil.clamp(
-                parentPoints[1][1].x + Math.floor(this.rdn(min, max)), this.width / 2, this.width);
-            const v2b = Math.floor(this.rdn(-vb + this.height, vb));
-            c2 = new Vector2(vb, v2b);
+                const vb = MathUtil.clamp(
+                    parentPoints[1][1].x + Math.floor(this.rdn(-mutQuantity, mutQuantity)), this.width / 2, this.width);
+                const v2b = Math.floor(this.rdn(-vb + this.height, vb));
+                c2 = new Vector2(vb, v2b);
 
-            const vc = MathUtil.clamp(
-                parentPoints[1][2].x + Math.floor(this.rdn(min, max)), 0, this.width);
-            const v2c = vc < this.width / 2 ?
-                Math.floor(this.rdn(-vc + this.height, this.height)) : Math.floor(this.rdn(vc, this.height));
-            c3 = new Vector2(vc, v2c);
+                const vc = MathUtil.clamp(
+                    parentPoints[1][2].x + Math.floor(this.rdn(-mutQuantity, mutQuantity)), 0, this.width);
+                const v2c = vc < this.width / 2 ?
+                    Math.floor(this.rdn(-vc + this.height, this.height)) : Math.floor(this.rdn(vc, this.height));
+                c3 = new Vector2(vc, v2c);
 
-            const vd = MathUtil.clamp(
-                parentPoints[1][3].x + Math.floor(this.rdn(min, max)), 0, this.width / 2);
-            const v2d = Math.floor(this.rdn(vd, -vd + this.height));
-            c4 = new Vector2(vd, v2d);
+                const vd = MathUtil.clamp(
+                    parentPoints[1][3].x + Math.floor(this.rdn(-mutQuantity, mutQuantity)), 0, this.width / 2);
+                const v2d = Math.floor(this.rdn(vd, -vd + this.height));
+                c4 = new Vector2(vd, v2d);
+            } else {
+                p1 = parentPoints[0][0];
+                p2 = parentPoints[0][1];
+                p3 = parentPoints[0][2];
+                p4 = parentPoints[0][3];
+                c1 = parentPoints[1][0];
+                c2 = parentPoints[1][1];
+                c3 = parentPoints[1][2];
+                c4 = parentPoints[1][3];
+            }
         } else {
             // generate the 4 points on the diagonal
             const ta = Math.floor(this.rdn(0, w1));
@@ -196,8 +210,10 @@ class SVGgen {
             c4 = new Vector2(vd, v2d);
         }
 
-        this.svgPoints = [p1, p2, p3, p4];
-        this.controlPoints = [c1, c2, c3, c4];
+        this.svgOrgPoints = [p1, p2, p3, p4];
+        this.controlOrgPoints = [c1, c2, c3, c4];
+
+        this.checkBordersOrg(f, p);
         
         this.svg = `<svg height="${this.height}" width="${this.width}" viewBox="0 0 ${this.width} ${this.height}" version="1.1" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">` +
                     `<radialGradient id="RadialGradient1" ` +
@@ -236,6 +252,47 @@ class SVGgen {
             `fill="${this.color}" stroke="black" stroke-width="3" /> ` +
         `<circle cx="${dim - 5}" cy="${dim / 2}" r="4" stroke="black" stroke-width="2" fill="black" /> ` +
         `</svg>`;
+    }
+
+    /**
+     * check if the organism with the eyes stays in the canvas
+     * otherwise it will enlarge it
+     * @param {number} fr food eye radius
+     * @param {number} pr poison eye radius
+     * @since botch-0.2
+     */
+    checkBordersOrg (fr, pr) {
+        const margin = Math.max(
+            this.svgOrgPoints[1].x + fr - this.width,
+            this.svgOrgPoints[2].x + pr - this.width
+        );
+
+        // if the image is not in the canvas
+        if (margin > 0) {
+            const x0 = this.width / 2;
+            const y0 = this.height / 2;
+
+            // resize the canvas
+            this.width += margin * 2;
+            this.height = this.width;
+
+            const x1 = this.width / 2;
+            const y1 = this.height / 2;
+            
+            // distance to the centre
+            const dx = x1 - x0;
+            const dy = y1 - y0;
+
+            // refresh the point coordinate
+            this.svgOrgPoints.forEach(p => {
+                p.x = p.x + dx;
+                p.y = p.y + dy;
+            });
+            this.controlOrgPoints.forEach(p => {
+                p.x = p.x + dx;
+                p.y = p.y + dy;
+            });
+        }
     }
 
     /**

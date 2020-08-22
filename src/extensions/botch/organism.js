@@ -22,8 +22,9 @@ class Organism {
      * @param {number} maxForce_ max force of the vehicle
      * @param {string} svgPoints_  svg points of the organism
      * @param {Array} dna_ dna
+     * @param {number} mutation how the organism can mutate [0 - 100]
      */
-    constructor (target_, mass_ = 1, maxForce_ = 0.5, svgPoints_, dna_) {
+    constructor (target_, mass_ = 1, maxForce_ = 0.5, svgPoints_, dna_, mutation) {
         // utils
         this.target = target_;
         this.renderer = this.target.renderer;
@@ -41,52 +42,52 @@ class Organism {
         // organism utils and proprieties
         this.svgPoints = svgPoints_;
         this.health = 1;
-        this.mr = 0.01;
         this.living = 0;
         this.isDeadTick = 0;
         this.effectStep = 7;
         this.currEffectStep = this.effectStep;
         this.effectSign = 1;
         this.perception = 100;
+        this.versionName = '';
+        this.max_att = 5;
+        this.max_perception = 150;
         this.dna = [];
 
         if (dna_) {
             // Mutation
+            const attScaled = MathUtil.scale(mutation, 0, 100, 0, this.max_att);
+            const perScaled = MathUtil.scale(mutation, 0, 100, 0, this.max_perception);
             this.dna[0] = dna_[0];
             if (Math.random() < this.mr) {
-                this.dna[0] += this.botchUtil.rdn(-1, 1);
+                this.dna[0] += this.botchUtil.rdn(-attScaled, attScaled);
             }
             this.dna[1] = dna_[1];
-            if (Math.random() < this.mr) {
-                this.dna[1] += this.botchUtil.rdn(-1, 1);
-            }
+            this.dna[1] += this.botchUtil.rdn(-attScaled, attScaled);
+            
             this.dna[2] = dna_[2];
-            if (Math.random() < this.mr) {
-                this.dna[2] += this.botchUtil.rdn(-15, 15);
-            }
+            this.dna[2] += this.botchUtil.rdn(-perScaled, perScaled);
+            
             this.dna[3] = dna_[3];
-            if (Math.random() < this.smr) {
-                this.dna[3] += this.botchUtil.rdn(-15, 15);
-            }
+            this.dna[3] += this.botchUtil.rdn(-perScaled, perScaled);
+            
             this.dna[4] = dna_[4];
-            if (Math.random() < this.mr) {
-                this.dna[4] += this.botchUtil.rdn(-1, 1);
-            }
+            this.dna[4] += this.botchUtil.rdn(-attScaled, attScaled);
+            
             this.dna[5] = dna_[5];
-            if (Math.random() < this.smr) {
-                this.dna[5] += this.botchUtil.rdn(-15, 15);
-            }
+            this.dna[5] += this.botchUtil.rdn(-perScaled, perScaled);
+            
         } else {
-            this.dna[0] = (Math.random() * 10) - 5; // food attraction
-            this.dna[1] = (Math.random() * 10) - 5; // poison attraction
-            this.dna[2] = Math.random() * 150; // food perception
-            this.dna[3] = Math.random() * 150; // poison perception
-            this.dna[4] = (Math.random() * 10) - 5; // enemy attraction
-            this.dna[5] = Math.random() * 150; // enemy perception
+            this.dna[0] = (this.max_att * (Math.random() * 2)) - 1; // food attraction
+            this.dna[1] = (this.max_att * (Math.random() * 2)) - 1; // poison attraction
+            this.dna[2] = Math.random() * this.max_perception; // food perception
+            this.dna[3] = Math.random() * this.max_perception; // poison perception
+            this.dna[4] = (this.max_att * (Math.random() * 2)) - 1; // enemy attraction
+            this.dna[5] = Math.random() * this.max_perception; // enemy perception
         }
 
+        // if is not defined, do not generate
         if (svgPoints_) {
-            this.svg = this.svgGen.generateOrgSVG(100, this.dna[0], this.dna[1], 5, svgPoints_);
+            this.svg = this.svgGen.generateOrgSVG(100, this.dna[0], this.dna[1], this.max_att, svgPoints_, mutation);
             this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
         }
 
@@ -136,7 +137,7 @@ class Organism {
      * assign the new generated costume to the target
      */
     assignOrgCostume () {
-        this.svg = this.svgGen.generateOrgSVG(100, this.dna[0], this.dna[1], 5);
+        this.svg = this.svgGen.generateOrgSVG(100, this.dna[0], this.dna[1], this.max_att);
         this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
     }
 
@@ -353,13 +354,24 @@ class Organism {
      * @returns {Organism} new copy Organism
      * @since botch-0.1
      */
-    clone () {
+    cloneProb () {
         if (Math.random() < 0.002) {
             const newOrg = new Organism(this.target, 1, 0.5, this.svgGen.getOrgPoints(), this.dna);
-            newOrg.assignOrgCostume();
             return newOrg;
         }
         return null;
+    }
+
+    /**
+     * Create a clone of itself "Parthenogenesis"
+     * when called it return always a new child
+     * @param {number} mutation how the organism will mutate [0 - 100]
+     * @returns {Organism} new copy Organism
+     * @since botch-0.2
+     */
+    clone (mutation) {
+        const newOrg = new Organism(this.target, 1, 0.5, this.svgGen.getOrgPoints(), this.dna, mutation);
+        return newOrg;
     }
 
     /**
