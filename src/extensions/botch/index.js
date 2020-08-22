@@ -114,7 +114,7 @@ class Scratch3Botch {
                 {
                     opcode: 'generatePopulation',
                     blockType: BlockType.COMMAND,
-                    text: 'generate [COPIES] children',
+                    text: 'populate with [COPIES] elements',
                     arguments: {
                         COPIES: {
                             type: ArgumentType.NUMBER,
@@ -150,11 +150,6 @@ class Scratch3Botch {
                     text: 'when an organism dies'
                 },
                 {
-                    opcode: 'isOrganismDead',
-                    blockType: BlockType.BOOLEAN,
-                    text: 'is organism dead (me)?'
-                },
-                {
                     opcode: 'sayBest',
                     blockType: BlockType.COMMAND,
                     text: 'the best says [TEXT]',
@@ -164,31 +159,6 @@ class Scratch3Botch {
                             defaultValue: 'Best!'
                         }
                     }
-                },
-                {
-                    opcode: 'foodAtt',
-                    blockType: BlockType.REPORTER,
-                    text: 'food att. best:'
-                },
-                {
-                    opcode: 'poisonAtt',
-                    blockType: BlockType.REPORTER,
-                    text: 'poison att. best:'
-                },
-                {
-                    opcode: 'foodDist',
-                    blockType: BlockType.REPORTER,
-                    text: 'food dist. best:'
-                },
-                {
-                    opcode: 'poisonDist',
-                    blockType: BlockType.REPORTER,
-                    text: 'poison dist. best:'
-                },
-                {
-                    opcode: 'health',
-                    blockType: BlockType.REPORTER,
-                    text: 'health best:'
                 },
                 {
                     opcode: 'living',
@@ -599,22 +569,6 @@ class Scratch3Botch {
             }
         }
     }
-
-    /**
-     * Return true if an organism id dead
-     * @param {args} args args
-     * @param {util} util util
-     * @returns {boolean} true if dead
-     * @since botch-0.2
-     */
-    isOrganismDead (args, util) {
-        if (this.organismMap.size > 0) {
-            const org = this.organismMap.get(util.target.id);
-            if (org) {
-                return (org.dead());
-            }
-        }
-    }
     
     /**
      * the hat of "when an organism dies"
@@ -934,75 +888,6 @@ class Scratch3Botch {
                     best = org;
                     max = org.living;
                 }
-            }
-        }
-        return best;
-    }
-
-    /**
-     * Return the food attraction of the best organism
-     * @returns {number} food attraction
-     * @since botch-0.2
-     */
-    foodAtt () {
-        const best = this.findBestOrganism();
-        if (best) {
-            return best.dna[0];
-        }
-        return 'nothing';
-    }
-
-    /**
-     * Return the poison attraction of the best organism
-     * @returns {number} poison attraction
-     * @since botch-0.2
-     */
-    poisonAtt () {
-        const best = this.findBestOrganism();
-        if (best) {
-            return best.dna[1];
-        }
-        return 'nothing';
-    }
-
-    /**
-     * Return the food perception of the best organism
-     * @returns {number} food perception
-     * @since botch-0.2
-     */
-    foodDist () {
-        const best = this.findBestOrganism();
-        if (best) {
-            return best.dna[2];
-        }
-        return 'nothing';
-    }
-
-    /**
-     * Return the poison perception of the best organism
-     * @returns {number} poison perception
-     * @since botch-0.2
-     */
-    poisonDist () {
-        const best = this.findBestOrganism();
-        if (best) {
-            return best.dna[3];
-        }
-        return 'nothing';
-    }
-
-    /**
-     * Return the health  of the best organism
-     * @returns {number} health
-     * @since botch-0.2
-     */
-    health () {
-        let best = null;
-        let max = -1;
-        for (const org of this.organismMap.values()) {
-            if (org.living > max) {
-                best = org.health;
-                max = org.living;
             }
         }
         return best;
