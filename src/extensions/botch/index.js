@@ -140,11 +140,6 @@ class Scratch3Botch {
                     }
                 },
                 {
-                    opcode: 'removeOrganism',
-                    blockType: BlockType.COMMAND,
-                    text: 'remove organism'
-                },
-                {
                     opcode: 'isDeadHat',
                     blockType: BlockType.HAT,
                     isEdgeActivated: false,
@@ -531,7 +526,8 @@ class Scratch3Botch {
                     if (org.deadSignal()) {
                         this.runtime._hats.botch_isDeadHat.edgeActivated = false;
                         this.runtime.startHats(
-                            'botch_isDeadHat', null, org.target); // TO DO probebilmente è meglio mettere l'animazione
+                            'botch_isDeadHat', null, org.target);
+                        this.organismMap.delete(org.target.id);
                     }
                 }
             }
@@ -591,25 +587,6 @@ class Scratch3Botch {
         return true;
     }
 
-    /**
-     * remove a specific organism whit the death animation
-     * @param {args} args args
-     * @param {util} util util
-     * @since botch-0.2
-     */
-    removeOrganism (args, util) {
-        if (this.organismMap.size > 1) {
-            const org = this.organismMap.get(util.target.id);
-            if (org.deathAnimation(util)) {
-                if (org) {
-                    this.runtime.disposeTarget(org.target);
-                    this.runtime.stopForTarget(org.target);
-                    this.organismMap.delete(org.target.id);
-                }
-            }
-        }
-    }
-
     /**  Copied from virtual-machine.js
      * @param {object} fileDescs serialized jsons
      * @param {JSZip} zip zip to add stuff to.
@@ -655,9 +632,9 @@ class Scratch3Botch {
         const StringUtil = require('../../util/string-util');
 
         const soundDescs = serializeSounds(this.runtime, targetId);
-        log.log('md5(soundDescs)', md5(soundDescs));
+        // log.log('md5(soundDescs)', md5(soundDescs));
         const costumeDescs = serializeCostumes(this.runtime, targetId);
-        log.log('md5(costumeDescs)', md5(costumeDescs));
+        // log.log('md5(costumeDescs)', md5(costumeDescs));
         const serialized = sb3.serialize(this.runtime, targetId);
         
         if (newName){
@@ -665,7 +642,7 @@ class Scratch3Botch {
         }
         const spriteJson = StringUtil.stringify(serialized);
 
-        log.log('md5(spriteJson)', md5(spriteJson));
+        // log.log('md5(spriteJson)', md5(spriteJson));
 
         // Botch: would have been nicer to calculate md5 of the zip
         // but md5 varies between zips: https://github.com/Stuk/jszip/issues/590
@@ -702,7 +679,7 @@ class Scratch3Botch {
      * @since botch-0.1
      */
     storeSprite (id, newName = '') {
-        log.log('Botch: trying to store sprite with original id', id);
+        // log.log('Botch: trying to store sprite with original id', id);
 
         if (!id){
             throw new Error(`Got empty id:${id}!`);
@@ -718,7 +695,7 @@ class Scratch3Botch {
 
         const retp = p.then(data => {
             
-            log.log('Botch: using newId from md5:', newId);
+            // log.log('Botch: using newId from md5:', newId);
             this.storageHelper._store(
                 this.storage.AssetType.Sprite,
                 this.storage.DataFormat.SB3,
@@ -726,9 +703,9 @@ class Scratch3Botch {
                 newId,
                 newName ? newName : this.runtime.getTargetById(id).sprite.name
             );
-            log.log('Botch: emitting ', Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
+            // log.log('Botch: emitting ', Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
             this.runtime.emit(Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
-            log.log('Botch: stored sprite with newId', newId);
+            // log.log('Botch: stored sprite with newId', newId);
 
         });
         
@@ -752,21 +729,21 @@ class Scratch3Botch {
 
         const storedSprite = this.storageHelper.assets[id];
 
-        log.log('storedSprite=', storedSprite);
+        // log.log('storedSprite=', storedSprite);
 
         return JSZip.loadAsync(storedSprite.data).then(zipObj => {
             const spriteFile = zipObj.file('sprite.json');
             if (!spriteFile) {
-                log.log.error("Couldn't find sprite.json inside stored Sprite !");
+                // log.log.error("Couldn't find sprite.json inside stored Sprite !");
                 return Promise.resolve(null);
 
             }
             if (!JSZip.support.uint8array) {
-                log.log.error('JSZip uint8array is not supported in this browser.');
+                // log.log.error('JSZip uint8array is not supported in this browser.');
                 return Promise.resolve(null);
             }
             return spriteFile.async('string').then(data => {
-                log.log('Botch: unzipped data (only sprite, no costume/sound data):', data);
+                // log.log('Botch: unzipped data (only sprite, no costume/sound data):', data);
                 const sprite = JSON.parse(data);
 
                 // in deserialize-assets is written:
@@ -820,7 +797,7 @@ class Scratch3Botch {
                         
                         sprite.objName = sprite.name;
                         // this.installTargets(targets, extensions, false)
-                        log.log('Botch: completely loaded asset:', asset);
+                        // log.log('Botch: completely loaded asset:', asset);
                         return asset;
                     });
             });
@@ -843,7 +820,7 @@ class Scratch3Botch {
         }
         return Promise.all(inStorage).then(libSprites => {
             const ret = libSprites.concat(DEFAULT_BOTCH_SPRITES);
-            log.log('libSprites=', ret);
+            // log.log('libSprites=', ret);
             return ret;
         });
 
