@@ -12,7 +12,6 @@ const ArgumentType = require('../../extension-support/argument-type');
 const BlockType = require('../../extension-support/block-type');
 const Cast = require('../../util/cast');
 const Organism = require('./organism');
-const svgen = require('./svg-generator');
 const Clone = require('../../util/clone');
 const BotchStorageHelper = require('./botch-storage-helper.js');
 const BotchUtil = require('./botch_util');
@@ -323,24 +322,9 @@ class Scratch3Botch {
                 this.enemiesMap = new Map();
             }
 
-            util.target.goToFront();
             this.organismMap = new Map();
-
-            const org = new Organism(
-                util.target, this.mass, this.maxForce);
-
-            // change the costume of the original sprite
-            const newSvg = new svgen(130, 130).generateOrgSVG(100, org.dna[0], org.dna[1], 5);
-            org.svg = newSvg;
-            // org.assignOrgCostume();
-            org.setParentVariable();
-            this.currentOrgCounter++;
-            org.currentName = this.currentOrgCounter.toString();
-            const p = this.storeSprite(util.target.id, org.currentName);
-            util.target.setCustomState('storedMd5', p.md5);
-            this.organismMap.set(util.target.id, org);
-
-            util.target.setVisible(true);
+            util.target.setVisible(false);
+            this.createOrganismClone(util.target, 0);
         }
         if (args.TYPE === 'food') {
             this.botchUtil.deleteClones(util.target.id);
@@ -458,10 +442,8 @@ class Scratch3Botch {
             util.target.setVisible(false); // hide the original
             const copies = Cast.toNumber(args.COPIES);
             if (this.organismMap.size === 1) {
-                if (copies === 0) {
-                    this.createOrganismClone(util.target, copies);
-                } else if (copies <= 30) {
-                    for (let i = 0; i <= copies; i++) {
+                if (copies > 0 && copies <= 30) {
+                    for (let i = 0; i < copies; i++) {
                         this.createOrganismClone(util.target, i);
                     }
                 }
@@ -474,7 +456,7 @@ class Scratch3Botch {
             util.target.id === this.enemiesMap.entries().next().value[0]) {
             const copies = Cast.toNumber(args.COPIES);
             if (copies > 0 && copies <= 30) {
-                for (let i = 0; i < copies; i++) {
+                for (let i = 0; i < copies - 1; i++) {
                     this.createEnemyClone(util.target);
                 }
             }
