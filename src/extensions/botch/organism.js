@@ -8,7 +8,7 @@ if (typeof TextEncoder === 'undefined') {
 
 const Vector2 = require('./vector2');
 const MathUtil = require('../../util/math-util');
-const svgen = require('./svg-generator');
+const svgGen = require('./svg-generator');
 const BotchUtil = require('./botch_util');
 
 /**
@@ -30,7 +30,7 @@ class Organism {
         this.renderer = this.target.renderer;
         this.runtime = this.target.runtime;
         this.storage = this.runtime.storage;
-        this.svgGen = new svgen(100, 100);
+        this.svgGen = new svgGen(100, 100);
         this.botchUtil = new BotchUtil(this.runtime);
         // vehicle proprieties
         this.acceleration = new Vector2(0, 0);
@@ -47,10 +47,12 @@ class Organism {
         this.effectStep = 7;
         this.currEffectStep = this.effectStep;
         this.effectSign = 1;
-        this.perception = 100;
+        this.perception = 200;
         this.versionName = '';
         this.max_att = 5;
         this.max_perception = 150;
+        this.max_size = 140;
+        this.min_size = 30;
         this.currentName = '';
         this.childNumber = 0;
         this.dna = [];
@@ -59,10 +61,10 @@ class Organism {
             // Mutation
             const attScaled = MathUtil.scale(mutation, 0, 100, 0, this.max_att);
             const perScaled = MathUtil.scale(mutation, 0, 100, 0, this.max_perception);
+            const sizeScaled = MathUtil.scale(mutation, 0, 100, 0, this.max_size);
             this.dna[0] = dna_[0];
-            if (Math.random() < this.mr) {
-                this.dna[0] += this.botchUtil.rdn(-attScaled, attScaled);
-            }
+            this.dna[0] += this.botchUtil.rdn(-attScaled, attScaled);
+
             this.dna[1] = dna_[1];
             this.dna[1] += this.botchUtil.rdn(-attScaled, attScaled);
             
@@ -77,25 +79,31 @@ class Organism {
             
             this.dna[5] = dna_[5];
             this.dna[5] += this.botchUtil.rdn(-perScaled, perScaled);
-            
+
+            this.dna[6] = dna_[6];
+            this.dna[6] += this.botchUtil.rdn(-sizeScaled / 2, sizeScaled / 2);
+            this.dna[6] = MathUtil.clamp(this.dna[6], this.min_size, this.max_size);
         } else {
-            this.dna[0] = (this.max_att * (Math.random() * 2)) - 1; // food attraction
-            this.dna[1] = (this.max_att * (Math.random() * 2)) - 1; // poison attraction
+            this.dna[0] = this.botchUtil.rdn(-this.max_att, this.max_att); // food attraction
+            this.dna[1] = this.botchUtil.rdn(-this.max_att, this.max_att); // poison attraction
             this.dna[2] = Math.random() * this.max_perception; // food perception
             this.dna[3] = Math.random() * this.max_perception; // poison perception
-            this.dna[4] = (this.max_att * (Math.random() * 2)) - 1; // enemy attraction
+            this.dna[4] = this.botchUtil.rdn(-this.max_att, this.max_att);// enemy attraction
             this.dna[5] = Math.random() * this.max_perception; // enemy perception
+            this.dna[6] = this.botchUtil.rdn(this.min_size, this.max_size); // sprite size (mass)
         }
 
         // if is not defined, do not generate
         if (svgPoints_) {
             this.svg = this.svgGen.generateOrgSVG(100, this.dna[0], this.dna[1], this.max_att, svgPoints_, mutation);
             this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
+            this.target.setSize(this.dna[6]);
         }
         
         // values found empirically
-        this.area = this.svgGen.calcOrgMass();
-        // this.health = MathUtil.scale(this.area, 2000, (this.svgGen.width) ** 2, 1, 3);
+        // this.area = this.svgGen.calcOrgMass();
+        this.health = MathUtil.scale(this.target.size, this.min_size, this.max_size, 0.8, 3);
+        this.mass = MathUtil.scale(this.target.size, this.min_size, this.max_size, 0.5, 7);
 
         // Variable assignment to the sprite
         // each clone has the its own dna saved and the dna of the non-clone target
@@ -128,12 +136,14 @@ class Organism {
     /**
      * Compute the step needed to move
      * @param {Map} organismMap the organism map
+     * @param {Map} enemiesMap enemiesMap
      * @since botch-0.2
      */
-    stepEnemy (organismMap) {
+    stepEnemy (organismMap, enemiesMap) {
         this.boundaries(
             this.runtime.constructor.STAGE_WIDTH - 150,
             this.runtime.constructor.STAGE_HEIGHT - 150);
+        this.separation(enemiesMap, 10);
         this.refreshArgs(this.mass, this.maxForce);
         this.behaveEnemy(organismMap);
         this.update();
@@ -145,7 +155,8 @@ class Organism {
     assignOrgCostume () {
         this.svg = this.svgGen.generateOrgSVG(100, this.dna[0], this.dna[1], this.max_att);
         this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
-        this.area = this.svgGen.calcOrgMass();
+        // this.area = this.svgGen.calcOrgMass();
+        this.target.setSize(this.dna[6]);
         // this.health = MathUtil.scale(this.area, 2000, (this.svgGen.width) ** 2, 1, 3);
     }
 
@@ -225,12 +236,12 @@ class Organism {
         steerB = this.eatGeneral(this.getPoisonTarget(), -0.5, this.dna[3]);
 
         if (enemiesMap && enemiesMap.size > 0) {
-            steerE = this.eatGeneral(enemiesMap, 0, this.dna[4]);
+            steerE = this.eatGeneral(enemiesMap, 0, this.dna[5]);
         }
 
         steerG.mult(this.dna[0]);
         steerB.mult(this.dna[1]);
-        steerE.mult(this.dna[5]);
+        steerE.mult(this.dna[4]);
         this.applyForce(steerG);
         this.applyForce(steerB);
         this.applyForce(steerE);
@@ -325,10 +336,12 @@ class Organism {
         } else if (agent.size > 0) { // with enemies
             for (let f of agent.values()) {
                 f = f.target;
-                const d = new Vector2(f.x, f.y).dist(new Vector2(this.target.x, this.target.y));
-                if (d < record && d < perception) {
-                    record = d;
-                    closest = f;
+                if (!f.isOriginal) {
+                    const d = new Vector2(f.x, f.y).dist(new Vector2(this.target.x, this.target.y));
+                    if (d < record && d < perception) {
+                        record = d;
+                        closest = f;
+                    }
                 }
             }
         }
@@ -499,6 +512,49 @@ class Organism {
             const steer = Vector2.sub(desired, this.velocity);
             steer.limit(this.maxForce);
             this.applyForce(steer);
+        }
+    }
+
+    /**
+     * Separate the vehicles to each other
+     * http://www.red3d.com/cwr/steer/gdc99/
+     * https://processing.org/examples/flocking.html
+     * @param {Map} organism organism or enemies map
+     * @param {number} radius radius of the separation
+     * @since botch-0.2
+     */
+    separation (organism, radius) {
+        let counter = 0;
+        const steer = new Vector2(0, 0);
+        for (const o of organism.values()) {
+            if (!o.target.isOriginal) { // do not consider the original
+                if (o.target.id !== this.target.id) {
+                    const d = new Vector2(o.target.x, o.target.y).dist(new Vector2(this.target.x, this.target.y));
+                    if (d < radius) {
+                        const diff = Vector2.sub(
+                            new Vector2(this.target.x, this.target.y), new Vector2(o.target.x, o.target.y)
+                        );
+                        diff.normalize();
+                        diff.div(d);
+                        steer.add(diff);
+                        counter++;
+                    }
+                }
+            }
+        }
+        // Average -- divide by how many
+        if (counter > 0) {
+            steer.div(counter);
+        }
+
+        // As long as the vector is greater than 0
+        if (steer.mag() > 0) {
+            // Implement Reynolds: Steering = Desired - Velocity
+            steer.normalize();
+            steer.mult(this.maxSpeed);
+            steer.sub(this.velocity);
+            steer.limit(this.maxForce);
+            this.applyForce(steer.mult(1.5));
         }
     }
 

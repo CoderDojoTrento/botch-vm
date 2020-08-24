@@ -392,7 +392,7 @@ class Scratch3Botch {
             // Place behind the original target.
             newClone.goBehindOther(target);
             // Set a random size
-            newClone.setSize((Math.random() * 100) + 30);
+            // newClone.setSize((Math.random() * 100) + 40);
             if (i === 0) { // the first clone is placed where is the original
                 newClone.setXY(target.x, target.y);
                 target.setCostume(org.target.currentCostume); // don't know why this does not work!
@@ -459,14 +459,8 @@ class Scratch3Botch {
             this.organismMap.get(util.target.id)) { // util.target.id === this.organismMap.entries().next().value[0]
             util.target.setVisible(false); // hide the original
             const copies = Cast.toNumber(args.COPIES);
-            if (this.organismMap.size === 1) {
-                if (copies > 0 && copies <= 30) {
-                    for (let i = 0; i < copies; i++) {
-                        this.createOrganismClone(util.target, i);
-                    }
-                }
-            } else {
-                for (let i = 1; i <= copies; i++) {
+            if (copies > 0 && copies <= 30) {
+                for (let i = 1; i < copies; i++) {
                     this.createOrganismClone(util.target, i);
                 }
             }
@@ -534,7 +528,7 @@ class Scratch3Botch {
         } else if (this.enemiesMap.size > 0 && this.enemiesMap.get(util.target.id)) {
             const enemy = this.enemiesMap.get(util.target.id);
             if (enemy && !enemy.target.isOriginal) {
-                enemy.stepEnemy(this.organismMap);
+                enemy.stepEnemy(this.organismMap, this.enemiesMap);
             }
         }
     }
