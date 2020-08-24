@@ -71,7 +71,14 @@ class Scratch3Botch {
         // show the organism when stopped
         this.runtime.on(Runtime.PROJECT_STOP_ALL, (() => {
             if (this.organismMap && this.organismMap.size > 0) {
-                this.organismMap.entries().next().value[1].target.setVisible(true);
+                for (const org of this.organismMap.values()) {
+                    org.target.setVisible(true);
+                }
+            }
+            if (this.enemiesMap && this.enemiesMap.size > 0) {
+                for (const en of this.enemiesMap.values()) {
+                    en.target.setVisible(true);
+                }
             }
             this.organismMap = new Map();
             this.enemiesMap = new Map();
@@ -323,8 +330,12 @@ class Scratch3Botch {
             }
 
             this.organismMap = new Map();
+            this.organismMap.set(util.target.id, new Organism(util.target));
             util.target.setVisible(false);
             this.createOrganismClone(util.target, 0);
+
+            const state = this.getBotchState(util.target);
+            state.type = Scratch3Botch.ORGANISM_TYPE;
         }
         if (args.TYPE === 'food') {
             this.botchUtil.deleteClones(util.target.id);
@@ -351,17 +362,13 @@ class Scratch3Botch {
                 this.organismMap = new Map();
             }
 
-            util.target.goToFront();
             this.enemiesMap = new Map();
-            util.target.setVisible(true);
-            const enemy = new Organism(
-                util.target, this.mass, this.enemiesMaxForce);
-            
+            this.enemiesMap.set(util.target.id, new Organism(util.target));
+            util.target.setVisible(false);
+            this.createEnemyClone(util.target, 0);
+        
             const state = this.getBotchState(util.target);
             state.type = Scratch3Botch.ENEMY_TYPE;
-
-            this.enemiesMap.set(util.target.id, enemy);
-            enemy.assignEnemyCostume();
         }
     }
 
@@ -399,15 +406,19 @@ class Scratch3Botch {
             org.currentName = this.currentOrgCounter.toString();
             const p = this.storeSprite(newClone.id, org.currentName);
             newClone.setCustomState('storedMd5', p.md5);
+            const state = this.getBotchState(newClone);
+            state.type = Scratch3Botch.ORGANISM_TYPE;
         }
     }
 
     /**
-     * Generate an enemy with clones
+     * Generate enemy with clones, the first clone will have the same position
+     * of the original
      * @param {target} target target
+     * @param {number} i index
      * @since botch-0.2
      */
-    createEnemyClone (target) {
+    createEnemyClone (target, i) {
         const newClone = this.botchUtil.createClone(target);
         if (newClone) {
             newClone.setVisible(true);
@@ -420,10 +431,17 @@ class Scratch3Botch {
             // Place behind the original target.
             newClone.goBehindOther(target);
 
+            if (i === 0) { // the first clone is placed where is the original
+                newClone.setXY(target.x, target.y);
+                target.setCostume(en.target.currentCostume); // don't know why this does not work!
+            } else {
             // place the new clone in a random position
-            const stageW = this.runtime.constructor.STAGE_WIDTH;
-            const stageH = this.runtime.constructor.STAGE_HEIGHT;
-            newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
+                const stageW = this.runtime.constructor.STAGE_WIDTH;
+                const stageH = this.runtime.constructor.STAGE_HEIGHT;
+                newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
+            }
+            const state = this.getBotchState(newClone);
+            state.type = Scratch3Botch.ENEMY_TYPE;
         }
     }
 
@@ -515,7 +533,7 @@ class Scratch3Botch {
             }
         } else if (this.enemiesMap.size > 0 && this.enemiesMap.get(util.target.id)) {
             const enemy = this.enemiesMap.get(util.target.id);
-            if (enemy) {
+            if (enemy && !enemy.target.isOriginal) {
                 enemy.stepEnemy(this.organismMap);
             }
         }
@@ -525,7 +543,7 @@ class Scratch3Botch {
         const mr = MathUtil.clamp(Cast.toNumber(args.MR), 0, 100);
         if (this.organismMap.size > 0 && this.organismMap.get(util.target.id)) {
             const org = this.organismMap.get(util.target.id);
-            if (!org.target.isOriginal) { // Only the clones are managed
+            if (org && !org.target.isOriginal) { // Only the clones are managed
                 if (org.health > 0) {
                     const newOrg = org.clone(mr);
                     const newClone = this.botchUtil.createClone(org.target);
@@ -544,7 +562,7 @@ class Scratch3Botch {
             }
         } else if (this.enemiesMap.size > 0 && this.enemiesMap.get(util.target.id)) {
             const enemy = this.enemiesMap.get(util.target.id);
-            if (enemy) {
+            if (enemy && !enemy.target.isOriginal) {
                 const newOrg = enemy.clone(mr);
                 const newClone = this.botchUtil.createClone(enemy.target);
                 if (newClone) {
