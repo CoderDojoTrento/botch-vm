@@ -717,15 +717,34 @@ class Scratch3Botch {
         const p = this.exportSprite(id, 'uint8array', newName);
         const newId = p.md5;
 
+        
         const retp = p.then(data => {
-            
+            const target = this.runtime.getTargetById(id);
             log.log('Botch: using newId from md5:', newId);
+            
+            let parentId = 'parent_0';
+        
+            if (target.variables &&
+                target.variables.botch_parent &&
+                target.variables.botch_parent.value){
+                const candidate = target.variables.botch_parent.value;
+                if (candidate !== 'parent_0'){
+                    if (candidate in this.storageHelper.assets){
+                        parentId = target.variables.botch_parent.value;
+                    } else {
+                        log.warn('Trying to store sprite with parentId not in store, defaulting to parent_0');
+                    }
+                }
+            } else {
+                log.warn('Trying to store sprite with no valid parentId, defaulting to parent_0');
+            }
             this.storageHelper._store(
                 this.storage.AssetType.Sprite,
                 this.storage.DataFormat.SB3,
                 data,
                 newId,
-                newName ? newName : this.runtime.getTargetById(id).sprite.name
+                newName ? newName : target.sprite.name,
+                parentId
             );
             log.log('Botch: emitting ', Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
             this.runtime.emit(Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
@@ -793,6 +812,8 @@ class Scratch3Botch {
                             1
                         ];
 
+                        // Botch: we added this
+                        asset.parentId = storedSprite.parentId;
 
                         // TO DO what about the id? createAsset setss assetId and assetName
                         asset.name = sprite.name;

@@ -133,15 +133,29 @@ class BotchStorageHelper extends Helper {
      * @param {Buffer} data - The data for the cached asset.
      * @param {(string|number)} id - The id for the cached asset.
      * @param {string} name - The name for the cached asset (Botch: we added it)
+     * @param {string} parentId - The id of the parent. If missing, use parent_0 (Botch: we added it)
+     
      * @returns {string} The calculated id of the cached asset, or the supplied id if the asset is mutable.
      */
-    _store (assetType, dataFormat, data, id, name) {
+    _store (assetType, dataFormat, data, id, name, parentId) {
         if (!name){
             throw new Error(`Missing name:${name}`);
         }
         if (!name.trim()){
             throw new Error('Provided name is all blank !');
         }
+        if (parentId !== 'parent_0'){
+            if (!parentId){
+                throw new Error(`Missing parentId:${parentId}`);
+            }
+            if (!parentId.trim()){
+                throw new Error('Provided parentId is all blank !');
+            }
+            if (!(parentId in this.assets)){
+                throw new Error('Provided parentId is not in assets !');
+            }
+        }
+        
         if (!dataFormat) throw new Error('Data cached without specifying its format');
         if (id !== '' && id !== null && typeof id !== 'undefined') {
             if (this.assets.hasOwnProperty(id) && assetType.immutable) {
@@ -158,7 +172,8 @@ class BotchStorageHelper extends Helper {
             format: dataFormat,
             id: id,
             data: data,
-            name: name
+            name: name,
+            parentId: parentId
         };
         return id;
     }
