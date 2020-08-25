@@ -21,10 +21,16 @@ class Organism {
      * @param {number} mass_ mass of the vehicle
      * @param {number} maxForce_ max force of the vehicle
      * @param {string} svgPoints_  svg points of the organism
-     * @param {Array} dna_ dna
      * @param {number} mutation how the organism can mutate [0 - 100]
+     * @param {number} foodAttraction food attraction
+     * @param {number} foodSight food sight
+     * @param {number} enemyAttraction enemy attraction
+     * @param {number} enemySight enemy sight
+     * @param {number} orgSize organism size (mass)
      */
-    constructor (target_, mass_ = 1, maxForce_ = 0.5, svgPoints_, dna_, mutation) {
+    constructor (target_, mass_ = 1, maxForce_ = 0.5, svgPoints_, mutation,
+        foodAttraction, foodSight, enemyAttraction, enemySight, orgSize) {
+
         // utils
         this.target = target_;
         this.renderer = this.target.renderer;
@@ -55,49 +61,42 @@ class Organism {
         this.min_size = 30;
         this.currentName = '';
         this.childNumber = 0;
-        this.dna = [];
+        // "dna" parameter
+        this.foodAttraction = 0;
+        this.foodSight = 0;
+        this.enemySight = 0;
+        this.enemyAttraction = 0;
+        this.size = 0;
 
-        if (dna_) {
-            // Mutation
+        if (foodAttraction && foodSight && enemyAttraction && enemySight && orgSize) {
             const attScaled = MathUtil.scale(mutation, 0, 100, 0, this.max_att);
             const perScaled = MathUtil.scale(mutation, 0, 100, 0, this.max_perception);
             const sizeScaled = MathUtil.scale(mutation, 0, 100, 0, this.max_size);
-            this.dna[0] = dna_[0];
-            this.dna[0] += this.botchUtil.rdn(-attScaled, attScaled);
-
-            this.dna[1] = dna_[1];
-            this.dna[1] += this.botchUtil.rdn(-attScaled, attScaled);
-            
-            this.dna[2] = dna_[2];
-            this.dna[2] += this.botchUtil.rdn(-perScaled, perScaled);
-            
-            this.dna[3] = dna_[3];
-            this.dna[3] += this.botchUtil.rdn(-perScaled, perScaled);
-            
-            this.dna[4] = dna_[4];
-            this.dna[4] += this.botchUtil.rdn(-attScaled, attScaled);
-            
-            this.dna[5] = dna_[5];
-            this.dna[5] += this.botchUtil.rdn(-perScaled, perScaled);
-
-            this.dna[6] = dna_[6];
-            this.dna[6] += this.botchUtil.rdn(-sizeScaled / 2, sizeScaled / 2);
-            this.dna[6] = MathUtil.clamp(this.dna[6], this.min_size, this.max_size);
+            this.foodAttraction = foodAttraction;
+            this.foodAttraction += this.botchUtil.rdn(-attScaled, attScaled);
+            this.foodSight = foodSight;
+            this.foodSight += this.botchUtil.rdn(-perScaled, perScaled);
+            this.enemyAttraction = enemyAttraction;
+            this.enemyAttraction += this.botchUtil.rdn(-attScaled, attScaled);
+            this.enemySight = enemySight;
+            this.enemySight += this.botchUtil.rdn(-perScaled, perScaled);
+            this.size = orgSize;
+            this.size += this.botchUtil.rdn(-sizeScaled / 2, sizeScaled / 2);
+            this.size = MathUtil.clamp(this.size, this.min_size, this.max_size);
         } else {
-            this.dna[0] = this.botchUtil.rdn(-this.max_att, this.max_att); // food attraction
-            this.dna[1] = this.botchUtil.rdn(-this.max_att, this.max_att); // poison attraction
-            this.dna[2] = Math.random() * this.max_perception; // food perception
-            this.dna[3] = Math.random() * this.max_perception; // poison perception
-            this.dna[4] = this.botchUtil.rdn(-this.max_att, this.max_att);// enemy attraction
-            this.dna[5] = Math.random() * this.max_perception; // enemy perception
-            this.dna[6] = this.botchUtil.rdn(this.min_size, this.max_size); // sprite size (mass)
+            this.foodAttraction = this.botchUtil.rdn(-this.max_att, this.max_att); // food attraction
+            this.foodSight = Math.random() * this.max_perception; // food perception
+            this.enemyAttraction = this.botchUtil.rdn(-this.max_att, this.max_att);// enemy attraction
+            this.enemySight = Math.random() * this.max_perception; // enemy perception
+            this.size = this.botchUtil.rdn(this.min_size, this.max_size); // sprite size (mass)
         }
 
         // if is not defined, do not generate
         if (svgPoints_) {
-            this.svg = this.svgGen.generateOrgSVG(100, this.dna[0], this.dna[1], this.max_att, svgPoints_, mutation);
+            this.svg = this.svgGen.generateOrgSVG(
+                100, this.foodAttraction, this.enemyAttraction, this.max_att, svgPoints_, mutation);
             this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
-            this.target.setSize(this.dna[6]);
+            this.target.setSize(this.size);
         }
         
         // values found empirically
@@ -107,13 +106,11 @@ class Organism {
 
         // Variable assignment to the sprite
         // each clone has the its own dna saved and the dna of the non-clone target
-        /* this.target.lookupOrCreateList(this.target.id, `dna_${this.target.id}`);
-        const list = this.target.lookupOrCreateList(
-            this.target.id, `dna_${this.target.id}`);
-        this.dna.forEach(element => {
-            list.value.push(element);
-        });
-        list._monitorUpToDate = false; */
+        this.target.lookupOrCreateVariable('botch_dna_foodS', 'food sight');
+        this.target.lookupOrCreateVariable('botch_dna_foodA', 'food attraction');
+        this.target.lookupOrCreateVariable('botch_dna_enemyS', 'enemy sight');
+        this.target.lookupOrCreateVariable('botch_dna_enemyA', 'enemy attraction');
+        this.target.lookupOrCreateVariable('botch_dna_size', 'size');
 
         this.target.lookupOrCreateVariable('botch_parent', 'parent');
     }
@@ -125,8 +122,8 @@ class Organism {
      */
     stepOrganism (enemiesMap) {
         this.boundaries(
-            this.runtime.constructor.STAGE_WIDTH,
-            this.runtime.constructor.STAGE_HEIGHT);
+            this.runtime.constructor.STAGE_WIDTH - 50,
+            this.runtime.constructor.STAGE_HEIGHT - 50);
         this.refreshArgs(this.mass, this.maxForce);
         this.behaveGeneralOrganism(enemiesMap);
         this.update();
@@ -153,10 +150,10 @@ class Organism {
      * assign the new generated costume to the target
      */
     assignOrgCostume () {
-        this.svg = this.svgGen.generateOrgSVG(100, this.dna[0], this.dna[1], this.max_att);
+        this.svg = this.svgGen.generateOrgSVG(100, this.foodAttraction, this.enemyAttraction, this.max_att);
         this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
         // this.area = this.svgGen.calcOrgMass();
-        this.target.setSize(this.dna[6]);
+        this.target.setSize(this.size);
         // this.health = MathUtil.scale(this.area, 2000, (this.svgGen.width) ** 2, 1, 3);
     }
 
@@ -232,16 +229,16 @@ class Organism {
         let steerG = new Vector2(0, 0);
         let steerB = new Vector2(0, 0);
         let steerE = new Vector2(0, 0);
-        steerG = this.eatGeneral(this.getFoodTarget(), 0.2, this.dna[2]);
-        steerB = this.eatGeneral(this.getPoisonTarget(), -0.5, this.dna[3]);
+        steerG = this.eatGeneral(this.getFoodTarget(), 0.2, this.foodSight);
+        steerB = this.eatGeneral(this.getPoisonTarget(), -0.5, this.enemySight);
 
         if (enemiesMap && enemiesMap.size > 0) {
-            steerE = this.eatGeneral(enemiesMap, 0, this.dna[5]);
+            steerE = this.eatGeneral(enemiesMap, 0, this.enemySight);
         }
 
-        steerG.mult(this.dna[0]);
-        steerB.mult(this.dna[1]);
-        steerE.mult(this.dna[4]);
+        steerG.mult(this.foodAttraction);
+        steerB.mult(this.enemyAttraction);
+        steerE.mult(this.enemyAttraction);
         this.applyForce(steerG);
         this.applyForce(steerB);
         this.applyForce(steerE);
@@ -377,7 +374,8 @@ class Organism {
      */
     cloneProb () {
         if (Math.random() < 0.002) {
-            const newOrg = new Organism(this.target, 1, 0.5, this.svgGen.getOrgPoints(), this.dna);
+            const newOrg = new Organism(this.target, 1, 0.5, this.svgGen.getOrgPoints(), this.mutation,
+                this.foodAttraction, this.foodSight, this.enemyAttraction, this.enemySight, this.size);
             return newOrg;
         }
         return null;
@@ -391,7 +389,8 @@ class Organism {
      * @since botch-0.2
      */
     clone (mutation) {
-        const newOrg = new Organism(this.target, 1, 0.5, this.svgGen.getOrgPoints(), this.dna, mutation);
+        const newOrg = new Organism(this.target, 1, 0.5, this.svgGen.getOrgPoints(), mutation,
+            this.foodAttraction, this.foodSight, this.enemyAttraction, this.enemySight, this.size);
         return newOrg;
     }
 
@@ -450,7 +449,7 @@ class Organism {
      */
     update () {
         this.living += 0.001;
-        this.health -= 0.005;
+        this.health -= 0.01;
         // Update velocity
         this.velocity.add(this.acceleration);
         // Limit speed
@@ -627,6 +626,23 @@ class Organism {
             const botchParent = 'botch_parent';
             this.target.variables[botchParent].value = 'parent_0';
         }
+    }
+
+    /**
+     * Set the dna scratch variable
+     * @since botch-0.2
+     */
+    setOrgDna () {
+        const foodS = 'botch_dna_foodS';
+        const foodA = 'botch_dna_foodA';
+        const enemyS = 'botch_dna_enemyS';
+        const enemyA = 'botch_dna_enemyA';
+        const sizeO = 'botch_dna_size';
+        this.target.variables[foodS].value = this.foodSight;
+        this.target.variables[foodA].value = this.foodAttraction;
+        this.target.variables[enemyS].value = this.enemySight;
+        this.target.variables[enemyA].value = this.enemyAttraction;
+        this.target.variables[sizeO].value = this.size;
     }
 
 }

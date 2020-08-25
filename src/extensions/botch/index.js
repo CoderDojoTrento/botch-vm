@@ -165,7 +165,7 @@ class Scratch3Botch {
                 {
                     opcode: 'living',
                     blockType: BlockType.REPORTER,
-                    text: 'life span:'
+                    text: 'life span'
                 }
             ],
             menus: {
@@ -388,6 +388,7 @@ class Scratch3Botch {
             const org = new Organism(newClone, this.mass, this.maxForce);
             this.organismMap.set(newClone.id, org);
             org.setParentVariable();
+            org.setOrgDna();
             org.assignOrgCostume();
             // Place behind the original target.
             newClone.goBehindOther(target);
@@ -545,13 +546,14 @@ class Scratch3Botch {
                         this.runtime.addTarget(newClone);
                         newClone.clearEffects();
                         newOrg.target = newClone; // assign the new target to new organism
+                        org.childNumber++;
+                        newOrg.currentName = `${org.currentName}.${org.childNumber}`;
+                        const p = this.storeSprite(newClone.id, newOrg.currentName);
+                        newClone.setCustomState('storedMd5', p.md5);
+                        newOrg.setParentVariable(org.target.getCustomState('storedMd5'));
+                        newOrg.setOrgDna();
+                        this.organismMap.set(newClone.id, newOrg);
                     }
-                    org.childNumber++;
-                    newOrg.currentName = `${org.currentName}.${org.childNumber}`;
-                    const p = this.storeSprite(newClone.id, newOrg.currentName);
-                    newClone.setCustomState('storedMd5', p.md5);
-                    newOrg.setParentVariable(org.target.getCustomState('storedMd5'));
-                    this.organismMap.set(newClone.id, newOrg);
                 }
             }
         } else if (this.enemiesMap.size > 0 && this.enemiesMap.get(util.target.id)) {
