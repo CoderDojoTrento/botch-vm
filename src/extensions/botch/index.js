@@ -12,13 +12,13 @@ const ArgumentType = require('../../extension-support/argument-type');
 const BlockType = require('../../extension-support/block-type');
 const Cast = require('../../util/cast');
 const Organism = require('./organism');
-const svgen = require('./svg-generator');
 const Clone = require('../../util/clone');
 const BotchStorageHelper = require('./botch-storage-helper.js');
 const BotchUtil = require('./botch_util');
 const DEFAULT_BOTCH_SPRITES = require('./default-botch-sprites.js');
 const log = require('../../util/log');
 const md5 = require('js-md5');
+const MathUtil = require('../../util/math-util');
 class Scratch3Botch {
 
     static get BOTCH_STORAGE_HELPER_UPDATE (){
@@ -37,6 +37,7 @@ class Scratch3Botch {
         this.mass = 1;
         // utils
         this.botchUtil = new BotchUtil(this.runtime);
+        this.currentOrgCounter = 0;
         
         // since that the project is loaded at the startup
         // for some reasons the storage is not already defined and it needs to
@@ -70,11 +71,18 @@ class Scratch3Botch {
         // show the organism when stopped
         this.runtime.on(Runtime.PROJECT_STOP_ALL, (() => {
             if (this.organismMap && this.organismMap.size > 0) {
-                this.organismMap.entries().next().value[1].target.setVisible(true);
+                for (const org of this.organismMap.values()) {
+                    org.target.setVisible(true);
+                }
+            }
+            if (this.enemiesMap && this.enemiesMap.size > 0) {
+                for (const en of this.enemiesMap.values()) {
+                    en.target.setVisible(true);
+                }
             }
             this.organismMap = new Map();
             this.enemiesMap = new Map();
-
+            this.currentOrgCounter = 0;
             // check if needed
             this.runtime.targets.forEach(element => {
                 if (!element.isStage) {
@@ -113,7 +121,7 @@ class Scratch3Botch {
                 {
                     opcode: 'generatePopulation',
                     blockType: BlockType.COMMAND,
-                    text: 'generate [COPIES] children',
+                    text: 'populate with [COPIES] elements',
                     arguments: {
                         COPIES: {
                             type: ArgumentType.NUMBER,
@@ -127,20 +135,21 @@ class Scratch3Botch {
                     text: 'update'
                 },
                 {
-                    opcode: 'removeOrganism',
+                    opcode: 'reproduceChild',
                     blockType: BlockType.COMMAND,
-                    text: 'remove organism'
+                    text: 'reproduce with [MR] mutation',
+                    arguments: {
+                        MR: {
+                            type: ArgumentType.NUMBER,
+                            defaultValue: 5
+                        }
+                    }
                 },
                 {
                     opcode: 'isDeadHat',
                     blockType: BlockType.HAT,
                     isEdgeActivated: false,
                     text: 'when an organism dies'
-                },
-                {
-                    opcode: 'isOrganismDead',
-                    blockType: BlockType.BOOLEAN,
-                    text: 'is organism dead (me)?'
                 },
                 {
                     opcode: 'sayBest',
@@ -152,31 +161,6 @@ class Scratch3Botch {
                             defaultValue: 'Best!'
                         }
                     }
-                },
-                {
-                    opcode: 'foodAtt',
-                    blockType: BlockType.REPORTER,
-                    text: 'food att. best:'
-                },
-                {
-                    opcode: 'poisonAtt',
-                    blockType: BlockType.REPORTER,
-                    text: 'poison att. best:'
-                },
-                {
-                    opcode: 'foodDist',
-                    blockType: BlockType.REPORTER,
-                    text: 'food dist. best:'
-                },
-                {
-                    opcode: 'poisonDist',
-                    blockType: BlockType.REPORTER,
-                    text: 'poison dist. best:'
-                },
-                {
-                    opcode: 'health',
-                    blockType: BlockType.REPORTER,
-                    text: 'health best:'
                 },
                 {
                     opcode: 'living',
@@ -203,7 +187,7 @@ class Scratch3Botch {
      * @since botch-0.2
      */
     static get STATE_KEY () {
-        return 'Scratch.botch';
+        return 'Botch.state';
     }
 
     /**
@@ -345,23 +329,17 @@ class Scratch3Botch {
                 this.enemiesMap = new Map();
             }
 
-            util.target.goToFront();
             this.organismMap = new Map();
+            this.organismMap.set(util.target.id, new Organism(util.target));
+            util.target.setVisible(false);
+            this.createOrganismClone(util.target, 0);
 
-            const org = new Organism(
-                util.target, this.mass, this.maxForce);
-
-            // change the costume of the original sprite
-            const newSvg = new svgen(130, 130).generateOrgSVG(100, org.dna[0], org.dna[1], 5);
-            org.svg = newSvg;
-            // org.assignOrgCostume();
-
-            this.organismMap.set(util.target.id, org);
-
-            util.target.setVisible(true);
+            const state = this.getBotchState(util.target);
+            state.type = Scratch3Botch.ORGANISM_TYPE;
         }
         if (args.TYPE === 'food') {
             this.botchUtil.deleteClones(util.target.id);
+            this.botchUtil.deleteAllOrgCostumes(util.target);
             util.target.setVisible(true);
 
             const state = this.getBotchState(util.target);
@@ -369,6 +347,7 @@ class Scratch3Botch {
         }
         if (args.TYPE === 'poison') {
             this.botchUtil.deleteClones(util.target.id);
+            this.botchUtil.deleteAllOrgCostumes(util.target);
             util.target.setVisible(true);
 
             const state = this.getBotchState(util.target);
@@ -376,23 +355,20 @@ class Scratch3Botch {
         }
         if (args.TYPE === 'enemy') {
             this.botchUtil.deleteClones(util.target.id);
+            this.botchUtil.deleteAllOrgCostumes(util.target);
             // check if it is already assigned somewhere
             if (this.organismMap.size > 0 &&
                 util.target.id === this.organismMap.entries().next().value[0]) {
                 this.organismMap = new Map();
             }
 
-            util.target.goToFront();
             this.enemiesMap = new Map();
-            util.target.setVisible(true);
-            const enemy = new Organism(
-                util.target, this.mass, this.enemiesMaxForce);
-            
+            this.enemiesMap.set(util.target.id, new Organism(util.target));
+            util.target.setVisible(false);
+            this.createEnemyClone(util.target, 0);
+        
             const state = this.getBotchState(util.target);
             state.type = Scratch3Botch.ENEMY_TYPE;
-
-            this.enemiesMap.set(util.target.id, enemy);
-            enemy.assignEnemyCostume();
         }
     }
 
@@ -416,7 +392,7 @@ class Scratch3Botch {
             // Place behind the original target.
             newClone.goBehindOther(target);
             // Set a random size
-            newClone.setSize((Math.random() * 100) + 30);
+            // newClone.setSize((Math.random() * 100) + 40);
             if (i === 0) { // the first clone is placed where is the original
                 newClone.setXY(target.x, target.y);
                 target.setCostume(org.target.currentCostume); // don't know why this does not work!
@@ -426,17 +402,23 @@ class Scratch3Botch {
                 const stageH = this.runtime.constructor.STAGE_HEIGHT;
                 newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
             }
-            const p = this.storeSprite(newClone.id);
+            this.currentOrgCounter++;
+            org.currentName = this.currentOrgCounter.toString();
+            const p = this.storeSprite(newClone.id, org.currentName);
             newClone.setCustomState('storedMd5', p.md5);
+            const state = this.getBotchState(newClone);
+            state.type = Scratch3Botch.ORGANISM_TYPE;
         }
     }
 
     /**
-     * Generate an enemy with clones
+     * Generate enemy with clones, the first clone will have the same position
+     * of the original
      * @param {target} target target
+     * @param {number} i index
      * @since botch-0.2
      */
-    createEnemyClone (target) {
+    createEnemyClone (target, i) {
         const newClone = this.botchUtil.createClone(target);
         if (newClone) {
             newClone.setVisible(true);
@@ -449,10 +431,17 @@ class Scratch3Botch {
             // Place behind the original target.
             newClone.goBehindOther(target);
 
+            if (i === 0) { // the first clone is placed where is the original
+                newClone.setXY(target.x, target.y);
+                target.setCostume(en.target.currentCostume); // don't know why this does not work!
+            } else {
             // place the new clone in a random position
-            const stageW = this.runtime.constructor.STAGE_WIDTH;
-            const stageH = this.runtime.constructor.STAGE_HEIGHT;
-            newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
+                const stageW = this.runtime.constructor.STAGE_WIDTH;
+                const stageH = this.runtime.constructor.STAGE_HEIGHT;
+                newClone.setXY((Math.random() - 0.5) * stageW, (Math.random() - 0.5) * stageH);
+            }
+            const state = this.getBotchState(newClone);
+            state.type = Scratch3Botch.ENEMY_TYPE;
         }
     }
 
@@ -470,16 +459,8 @@ class Scratch3Botch {
             this.organismMap.get(util.target.id)) { // util.target.id === this.organismMap.entries().next().value[0]
             util.target.setVisible(false); // hide the original
             const copies = Cast.toNumber(args.COPIES);
-            if (this.organismMap.size === 1) {
-                if (copies === 0) {
-                    this.createOrganismClone(util.target, copies);
-                } else if (copies <= 30) {
-                    for (let i = 0; i <= copies; i++) {
-                        this.createOrganismClone(util.target, i);
-                    }
-                }
-            } else {
-                for (let i = 1; i <= copies; i++) {
+            if (copies > 0 && copies <= 30) {
+                for (let i = 1; i < copies; i++) {
                     this.createOrganismClone(util.target, i);
                 }
             }
@@ -487,7 +468,7 @@ class Scratch3Botch {
             util.target.id === this.enemiesMap.entries().next().value[0]) {
             const copies = Cast.toNumber(args.COPIES);
             if (copies > 0 && copies <= 30) {
-                for (let i = 0; i < copies; i++) {
+                for (let i = 0; i < copies - 1; i++) {
                     this.createEnemyClone(util.target);
                 }
             }
@@ -533,49 +514,57 @@ class Scratch3Botch {
             if (!org.target.isOriginal) { // Only the clones are managed
                 if (org.health > 0) {
                     org.stepOrganism(this.enemiesMap);
-
-                    const newOrg = org.clone();
-                    if (newOrg !== null) { // if it create a child
-                        const newClone = this.botchUtil.createClone(org.target);
-                        if (newClone) {
-                            this.runtime.addTarget(newClone);
-                            newClone.clearEffects();
-                            newOrg.target = newClone; // assign the new target to new organism
-                        }
-                        const p = this.storeSprite(newClone.id);
-                        newClone.setCustomState('storedMd5', p.md5);
-                        newOrg.setParentVariable(org.target.getCustomState('storedMd5'));
-                        this.organismMap.set(newClone.id, newOrg);
-                    }
                 }
 
                 if (org.dead()) {
-                    // this.createFoodXY(org.target.x, org.target.y);
-                    this.runtime._hats.botch_isDeadHat.edgeActivated = false;
-                    this.runtime.startHats(
-                        'botch_isDeadHat', null, org.target); // TO DO probebilmente è meglio mettere l'animazione
+                    if (org.deadSignal()) {
+                        this.runtime._hats.botch_isDeadHat.edgeActivated = false;
+                        this.runtime.startHats(
+                            'botch_isDeadHat', null, org.target);
+                        this.organismMap.delete(org.target.id);
+                    }
                 }
             }
         } else if (this.enemiesMap.size > 0 && this.enemiesMap.get(util.target.id)) {
             const enemy = this.enemiesMap.get(util.target.id);
-            if (enemy) {
-                enemy.stepEnemy(this.organismMap);
+            if (enemy && !enemy.target.isOriginal) {
+                enemy.stepEnemy(this.organismMap, this.enemiesMap);
             }
         }
     }
 
-    /**
-     * Return true if an organism id dead
-     * @param {args} args args
-     * @param {util} util util
-     * @returns {boolean} true if dead
-     * @since botch-0.2
-     */
-    isOrganismDead (args, util) {
-        if (this.organismMap.size > 0) {
+    reproduceChild (args, util) {
+        const mr = MathUtil.clamp(Cast.toNumber(args.MR), 0, 100);
+        if (this.organismMap.size > 0 && this.organismMap.get(util.target.id)) {
             const org = this.organismMap.get(util.target.id);
-            if (org) {
-                return (org.dead());
+            if (org && !org.target.isOriginal) { // Only the clones are managed
+                if (org.health > 0) {
+                    const newOrg = org.clone(mr);
+                    const newClone = this.botchUtil.createClone(org.target);
+                    if (newClone) {
+                        this.runtime.addTarget(newClone);
+                        newClone.clearEffects();
+                        newOrg.target = newClone; // assign the new target to new organism
+                    }
+                    org.childNumber++;
+                    newOrg.currentName = `${org.currentName}.${org.childNumber}`;
+                    const p = this.storeSprite(newClone.id, newOrg.currentName);
+                    newClone.setCustomState('storedMd5', p.md5);
+                    newOrg.setParentVariable(org.target.getCustomState('storedMd5'));
+                    this.organismMap.set(newClone.id, newOrg);
+                }
+            }
+        } else if (this.enemiesMap.size > 0 && this.enemiesMap.get(util.target.id)) {
+            const enemy = this.enemiesMap.get(util.target.id);
+            if (enemy && !enemy.target.isOriginal) {
+                const newOrg = enemy.clone(mr);
+                const newClone = this.botchUtil.createClone(enemy.target);
+                if (newClone) {
+                    this.runtime.addTarget(newClone);
+                    newClone.clearEffects();
+                    newOrg.target = newClone;
+                }
+                this.enemiesMap.set(newClone.id, newOrg);
             }
         }
     }
@@ -590,25 +579,6 @@ class Scratch3Botch {
      */
     isDeadHat () {
         return true;
-    }
-
-    /**
-     * remove a specific organism whit the death animation
-     * @param {args} args args
-     * @param {util} util util
-     * @since botch-0.2
-     */
-    removeOrganism (args, util) {
-        if (this.organismMap.size > 1) {
-            const org = this.organismMap.get(util.target.id);
-            if (org.deathAnimation(util)) {
-                if (org) {
-                    this.runtime.disposeTarget(org.target);
-                    this.runtime.stopForTarget(org.target);
-                    this.organismMap.delete(org.target.id);
-                }
-            }
-        }
     }
 
     /**  Copied from virtual-machine.js
@@ -656,9 +626,9 @@ class Scratch3Botch {
         const StringUtil = require('../../util/string-util');
 
         const soundDescs = serializeSounds(this.runtime, targetId);
-        log.log('md5(soundDescs)', md5(soundDescs));
+        // log.log('md5(soundDescs)', md5(soundDescs));
         const costumeDescs = serializeCostumes(this.runtime, targetId);
-        log.log('md5(costumeDescs)', md5(costumeDescs));
+        // log.log('md5(costumeDescs)', md5(costumeDescs));
         const serialized = sb3.serialize(this.runtime, targetId);
         
         if (newName){
@@ -666,7 +636,7 @@ class Scratch3Botch {
         }
         const spriteJson = StringUtil.stringify(serialized);
 
-        log.log('md5(spriteJson)', md5(spriteJson));
+        // log.log('md5(spriteJson)', md5(spriteJson));
 
         // Botch: would have been nicer to calculate md5 of the zip
         // but md5 varies between zips: https://github.com/Stuk/jszip/issues/590
@@ -703,7 +673,7 @@ class Scratch3Botch {
      * @since botch-0.1
      */
     storeSprite (id, newName = '') {
-        log.log('Botch: trying to store sprite with original id', id);
+        // log.log('Botch: trying to store sprite with original id', id);
 
         if (!id){
             throw new Error(`Got empty id:${id}!`);
@@ -719,6 +689,7 @@ class Scratch3Botch {
 
         
         const retp = p.then(data => {
+
             const target = this.runtime.getTargetById(id);
             log.log('Botch: using newId from md5:', newId);
             
@@ -738,6 +709,9 @@ class Scratch3Botch {
             } else {
                 log.warn('Trying to store sprite with no valid parentId, defaulting to parent_0');
             }
+            
+            // log.log('Botch: using newId from md5:', newId);
+
             this.storageHelper._store(
                 this.storage.AssetType.Sprite,
                 this.storage.DataFormat.SB3,
@@ -746,9 +720,9 @@ class Scratch3Botch {
                 newName ? newName : target.sprite.name,
                 parentId
             );
-            log.log('Botch: emitting ', Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
+            // log.log('Botch: emitting ', Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
             this.runtime.emit(Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
-            log.log('Botch: stored sprite with newId', newId);
+            // log.log('Botch: stored sprite with newId', newId);
 
         });
         
@@ -772,21 +746,21 @@ class Scratch3Botch {
 
         const storedSprite = this.storageHelper.assets[id];
 
-        log.log('storedSprite=', storedSprite);
+        // log.log('storedSprite=', storedSprite);
 
         return JSZip.loadAsync(storedSprite.data).then(zipObj => {
             const spriteFile = zipObj.file('sprite.json');
             if (!spriteFile) {
-                log.log.error("Couldn't find sprite.json inside stored Sprite !");
+                // log.log.error("Couldn't find sprite.json inside stored Sprite !");
                 return Promise.resolve(null);
 
             }
             if (!JSZip.support.uint8array) {
-                log.log.error('JSZip uint8array is not supported in this browser.');
+                // log.log.error('JSZip uint8array is not supported in this browser.');
                 return Promise.resolve(null);
             }
             return spriteFile.async('string').then(data => {
-                log.log('Botch: unzipped data (only sprite, no costume/sound data):', data);
+                // log.log('Botch: unzipped data (only sprite, no costume/sound data):', data);
                 const sprite = JSON.parse(data);
 
                 // in deserialize-assets is written:
@@ -842,7 +816,7 @@ class Scratch3Botch {
                         
                         sprite.objName = sprite.name;
                         // this.installTargets(targets, extensions, false)
-                        log.log('Botch: completely loaded asset:', asset);
+                        // log.log('Botch: completely loaded asset:', asset);
                         return asset;
                     });
             });
@@ -865,7 +839,7 @@ class Scratch3Botch {
         }
         return Promise.all(inStorage).then(libSprites => {
             const ret = libSprites.concat(DEFAULT_BOTCH_SPRITES);
-            log.log('libSprites=', ret);
+            // log.log('libSprites=', ret);
             return ret;
         });
 
@@ -919,75 +893,6 @@ class Scratch3Botch {
                     best = org;
                     max = org.living;
                 }
-            }
-        }
-        return best;
-    }
-
-    /**
-     * Return the food attraction of the best organism
-     * @returns {number} food attraction
-     * @since botch-0.2
-     */
-    foodAtt () {
-        const best = this.findBestOrganism();
-        if (best) {
-            return best.dna[0];
-        }
-        return 'nothing';
-    }
-
-    /**
-     * Return the poison attraction of the best organism
-     * @returns {number} poison attraction
-     * @since botch-0.2
-     */
-    poisonAtt () {
-        const best = this.findBestOrganism();
-        if (best) {
-            return best.dna[1];
-        }
-        return 'nothing';
-    }
-
-    /**
-     * Return the food perception of the best organism
-     * @returns {number} food perception
-     * @since botch-0.2
-     */
-    foodDist () {
-        const best = this.findBestOrganism();
-        if (best) {
-            return best.dna[2];
-        }
-        return 'nothing';
-    }
-
-    /**
-     * Return the poison perception of the best organism
-     * @returns {number} poison perception
-     * @since botch-0.2
-     */
-    poisonDist () {
-        const best = this.findBestOrganism();
-        if (best) {
-            return best.dna[3];
-        }
-        return 'nothing';
-    }
-
-    /**
-     * Return the health  of the best organism
-     * @returns {number} health
-     * @since botch-0.2
-     */
-    health () {
-        let best = null;
-        let max = -1;
-        for (const org of this.organismMap.values()) {
-            if (org.living > max) {
-                best = org.health;
-                max = org.living;
             }
         }
         return best;
