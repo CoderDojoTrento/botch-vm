@@ -93,9 +93,17 @@ class Organism {
 
         // if is not defined, do not generate
         if (svgPoints_) {
-            this.svg = this.svgGen.generateOrgSVG(
-                100, this.foodAttraction, this.enemyAttraction, this.max_att, svgPoints_, mutation);
+            this.svg = this.svgGen.generateOrgSVG2(
+                100, this.foodAttraction, this.enemyAttraction, this.max_att,
+                this.foodSight, this.enemySight, this.max_perception, svgPoints_, mutation);
             this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
+
+            /* for (let i = this.target.getCostumes().length - 1; i >= 0; i--) {
+                if (i !== this.target.currentCostume) {
+                    this.target.deleteCostume(i); // hack troppo brutta ed instabile
+                }
+            } */
+
             this.target.setSize(this.size);
         }
         
@@ -150,7 +158,8 @@ class Organism {
      * assign the new generated costume to the target
      */
     assignOrgCostume () {
-        this.svg = this.svgGen.generateOrgSVG(100, this.foodAttraction, this.enemyAttraction, this.max_att);
+        this.svg = this.svgGen.generateOrgSVG2(100, this.foodAttraction, this.enemyAttraction, this.max_att,
+            this.foodSight, this.enemySight, this.max_perception);
         this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
         // this.area = this.svgGen.calcOrgMass();
         this.target.setSize(this.size);
