@@ -38,6 +38,7 @@ class Scratch3Botch {
         // utils
         this.botchUtil = new BotchUtil(this.runtime);
         this.currentOrgCounter = 0;
+        this.originalOrg = null; // this is the clone that hide the original when set as organism
         
         // since that the project is loaded at the startup
         // for some reasons the storage is not already defined and it needs to
@@ -330,7 +331,11 @@ class Scratch3Botch {
             }
 
             this.organismMap = new Map();
-            this.organismMap.set(util.target.id, new Organism(util.target));
+            const org = new Organism(util.target);
+            this.organismMap.set(util.target.id, org);
+
+            org.currentName = this.currentOrgCounter.toString();
+
             util.target.setVisible(false);
             this.createOrganismClone(util.target, 0);
 
@@ -396,7 +401,6 @@ class Scratch3Botch {
             // newClone.setSize((Math.random() * 100) + 40);
             if (i === 0) { // the first clone is placed where is the original
                 newClone.setXY(target.x, target.y);
-                target.setCostume(org.target.currentCostume); // don't know why this does not work!
             } else {
             // place the new clone in a random position
                 const stageW = this.runtime.constructor.STAGE_WIDTH;
@@ -409,6 +413,10 @@ class Scratch3Botch {
             newClone.setCustomState('storedMd5', p.md5);
             const state = this.getBotchState(newClone);
             state.type = Scratch3Botch.ORGANISM_TYPE;
+
+            if (target.isOriginal) {
+                this.originalOrg = org;
+            }
         }
     }
 
@@ -537,15 +545,17 @@ class Scratch3Botch {
     reproduceChild (args, util) {
         const mr = MathUtil.clamp(Cast.toNumber(args.MR), 0, 100);
         if (this.organismMap.size > 0 && this.organismMap.get(util.target.id)) {
-            const org = this.organismMap.get(util.target.id);
-            if (org && !org.target.isOriginal) { // Only the clones are managed
-                if (org.health > 0) {
-                    const newOrg = org.clone(mr);
+            let org = this.organismMap.get(util.target.id);
+            if (util.target.isOriginal) {
+                org = this.originalOrg;
+            }
+            if (org) {
+                if (org.health >= 0) {
                     const newClone = this.botchUtil.createClone(org.target);
                     if (newClone) {
                         this.runtime.addTarget(newClone);
+                        const newOrg = org.clone(mr, newClone);
                         newClone.clearEffects();
-                        newOrg.target = newClone; // assign the new target to new organism
                         org.childNumber++;
                         newOrg.currentName = `${org.currentName}.${org.childNumber}`;
                         const p = this.storeSprite(newClone.id, newOrg.currentName);
@@ -558,15 +568,14 @@ class Scratch3Botch {
             }
         } else if (this.enemiesMap.size > 0 && this.enemiesMap.get(util.target.id)) {
             const enemy = this.enemiesMap.get(util.target.id);
-            if (enemy && !enemy.target.isOriginal) {
-                const newOrg = enemy.clone(mr);
+            if (enemy) {
                 const newClone = this.botchUtil.createClone(enemy.target);
                 if (newClone) {
                     this.runtime.addTarget(newClone);
+                    const newOrg = enemy.clone(mr, newClone);
                     newClone.clearEffects();
-                    newOrg.target = newClone;
+                    this.enemiesMap.set(newClone.id, newOrg);
                 }
-                this.enemiesMap.set(newClone.id, newOrg);
             }
         }
     }

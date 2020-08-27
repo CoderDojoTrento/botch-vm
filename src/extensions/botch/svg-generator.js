@@ -107,7 +107,7 @@ class SVGgen {
      * @param {number} magR max poison or food attraction
      * @param {number} foodS food distance
      * @param {number} poisonS poison distance
-     * @param {number} magA max poison or food distance
+     * @param {number} magD max poison or food distance
      * @param {Array} parentPoints the points of the parent
      * @param {number} mutation how the organism svg will be different
      * @returns {string} the svg
@@ -122,109 +122,111 @@ class SVGgen {
      * .
      * fa piuttosto schifo da vedere come funzione...
      */
-    generateOrgSVG2 (dim, foodR, poisonR, magR, foodS, poisonS, magA, parentPoints, mutation) {
+    generateOrgSVG3 (dim, foodR, poisonR, magR, foodS, poisonS, magD, parentPoints, mutation) {
         const f = MathUtil.scale(foodR, -magR, magR, 0, 15);
         const p = MathUtil.scale(poisonR, -magR, magR, 0, 15);
-        const fl = MathUtil.scale(foodS, 0, magA, 0, 50);
-        const pl = MathUtil.scale(poisonS, 0, magA, 0, 50);
+        const fl = MathUtil.scale(foodS, 0, magD, 0, 50);
+        const pl = MathUtil.scale(poisonS, 0, magD, 0, 50);
         const antennaWidth = 5;
-        const controlPointF = MathUtil.scale(foodS, 0, magA, 0, 50);
-        const controlPointP = MathUtil.scale(poisonS, 0, magA, 0, 50);
+        const controlPointF = MathUtil.scale(foodS, 0, magD, 0, 10);
+        const controlPointP = MathUtil.scale(poisonS, 0, magD, 0, 10);
 
+        const margin = 15;
+        
         // resize the canvas to be a square
         this.width = dim;
         this.height = dim;
-       
-        const margin = 15;
-        const w1 = (this.width / 2) - margin;
-        const w2 = (this.width / 2) + margin;
+        const maxMargin = Math.max(fl + f, pl + p);
+        this.width += maxMargin * 2;
+        this.height = this.width;
+        
+        const w0 = (this.width / 2) + (dim / 2);
+        const w1 = (this.width / 2) - (dim / 2);
+        const wm0 = (this.width / 2) + margin;
+        const wm1 = (this.width / 2) - margin;
+
+        // const h0 = (dim / 2);
         // the new points differ by -min +max from the parent point
-        const mutQuantity = MathUtil.scale(mutation, 0, 100, 0, 15);
         let p1; let p2; let p3; let p4; let c1; let c2; let c3; let c4;
 
         if (parentPoints) {
-            if (mutQuantity > 0) {
+            const mutQuantity = MathUtil.scale(mutation, 0, 100, 0, 10);
             // generate the 4 points on the diagonal
-                const ta = MathUtil.clamp(
-                    parentPoints[0][0].x + Math.floor(this.rdn(-mutQuantity, mutQuantity)), 0, w1);
-                p1 = new Vector2(ta, ta);
- 
-                const tb = MathUtil.clamp(
-                    parentPoints[0][1].x + Math.floor(this.rdn(-mutQuantity, mutQuantity)), w2, this.width - margin);
-                p2 = new Vector2(tb, -tb + this.height);
-            
-                const tc = MathUtil.clamp(
-                    parentPoints[0][2].x + Math.floor(this.rdn(-mutQuantity, mutQuantity)), w2, this.width - margin);
-                p3 = new Vector2(tc, tc);
- 
-                const td = MathUtil.clamp(
-                    parentPoints[0][3].x + Math.floor(this.rdn(-mutQuantity, mutQuantity)), 0, w1);
-                p4 = new Vector2(td, -td + this.height);
-
-                // generate the 4 control points
-                const va = MathUtil.clamp(
-                    parentPoints[1][0].x + Math.floor(this.rdn(-mutQuantity, mutQuantity)), 0, this.width);
-                const v2a = va < this.width / 2 ?
-                    Math.floor(this.rdn(0, va)) : Math.floor(this.rdn(0, -va + this.height));
-                c1 = new Vector2(va, v2a);
-
-                const vb = MathUtil.clamp(
-                    parentPoints[1][1].x + Math.floor(this.rdn(-mutQuantity, mutQuantity)), this.width / 2, this.width);
-                const v2b = Math.floor(this.rdn(-vb + this.height, vb));
-                c2 = new Vector2(vb, v2b);
-
-                const vc = MathUtil.clamp(
-                    parentPoints[1][2].x + Math.floor(this.rdn(-mutQuantity, mutQuantity)), 0, this.width);
-                const v2c = vc < this.width / 2 ?
-                    Math.floor(this.rdn(-vc + this.height, this.height)) : Math.floor(this.rdn(vc, this.height));
-                c3 = new Vector2(vc, v2c);
-
-                const vd = MathUtil.clamp(
-                    parentPoints[1][3].x + Math.floor(this.rdn(-mutQuantity, mutQuantity)), 0, this.width / 2);
-                const v2d = Math.floor(this.rdn(vd, -vd + this.height));
-                c4 = new Vector2(vd, v2d);
-            } else {
-                p1 = parentPoints[0][0];
-                p2 = parentPoints[0][1];
-                p3 = parentPoints[0][2];
-                p4 = parentPoints[0][3];
-                c1 = parentPoints[1][0];
-                c2 = parentPoints[1][1];
-                c3 = parentPoints[1][2];
-                c4 = parentPoints[1][3];
-            }
-        } else {
-            // generate the 4 points on the diagonal
-            const ta = Math.floor(this.rdn(0, w1));
+            const ta = MathUtil.clamp(
+                parentPoints[0][0].x + this.rdn(-mutQuantity, mutQuantity), w1, wm1);
             p1 = new Vector2(ta, ta);
-
-            const tb = Math.floor(this.rdn(w2, this.width - margin));
+ 
+            const tb = MathUtil.clamp(
+                parentPoints[0][1].x + this.rdn(-mutQuantity, mutQuantity), wm0, w0);
             p2 = new Vector2(tb, -tb + this.height);
-
-            const tc = Math.floor(this.rdn(w2, this.width - margin));
+            
+            const tc = MathUtil.clamp(
+                parentPoints[0][2].x + this.rdn(-mutQuantity, mutQuantity), wm0, w0);
             p3 = new Vector2(tc, tc);
-
-            const td = Math.floor(this.rdn(0, w1));
+ 
+            const td = MathUtil.clamp(
+                parentPoints[0][3].x + this.rdn(-mutQuantity, mutQuantity), w1, wm1);
             p4 = new Vector2(td, -td + this.height);
 
             // generate the 4 control points
-            const va = Math.floor(this.rdn(0, this.width));
+            const va = MathUtil.clamp(
+                parentPoints[1][0].x + this.rdn(-mutQuantity, mutQuantity), w1, w0);
             const minA = Math.min(p1.y, p2.y) - 10;
-            const v2a = Math.floor(this.rdn(0, minA));
+            const v2a = MathUtil.clamp(
+                parentPoints[1][1].y + this.rdn(-mutQuantity, mutQuantity), w1, minA);
             c1 = new Vector2(va, v2a);
 
             const maxB = Math.max(p2.x, p3.x) + 10;
-            const vb = Math.floor(this.rdn(maxB, this.width));
-            const v2b = Math.floor(this.rdn(-vb + this.height, vb));
+            const vb = MathUtil.clamp(
+                parentPoints[1][1].x + this.rdn(-mutQuantity, mutQuantity), maxB, w0);
+            const v2b = MathUtil.clamp(
+                parentPoints[1][1].y + this.rdn(-mutQuantity, mutQuantity), w1, w0);
             c2 = new Vector2(vb, v2b);
 
-            const vc = Math.floor(this.rdn(0, this.width));
+            const vc = MathUtil.clamp(
+                parentPoints[1][2].x + this.rdn(-mutQuantity, mutQuantity), 0, this.width);
             const maxC = Math.max(p3.y, p4.y) + 10;
-            const v2c = Math.floor(this.rdn(maxC, this.height));
+            const v2c = MathUtil.clamp(
+                parentPoints[1][2].y + this.rdn(-mutQuantity, mutQuantity), maxC, w0);
             c3 = new Vector2(vc, v2c);
 
             const minD = Math.min(p1.x, p4.x) - 10;
-            const vd = Math.floor(this.rdn(0, minD));
+            const vd = MathUtil.clamp(parentPoints[1][3].x + this.rdn(-mutQuantity, mutQuantity), w1, minD);
+            const v2d = MathUtil.clamp(
+                parentPoints[1][3].y + this.rdn(-mutQuantity, mutQuantity), w1, w0);
+            c4 = new Vector2(vd, v2d);
+        } else {
+            // generate the 4 points on the diagonal
+            const ta = Math.floor(this.rdn(w1, wm1));
+            p1 = new Vector2(ta, ta);
+
+            const tb = Math.floor(this.rdn(wm0, w0));
+            p2 = new Vector2(tb, -tb + this.height);
+
+            const tc = Math.floor(this.rdn(wm0, w0));
+            p3 = new Vector2(tc, tc);
+
+            const td = Math.floor(this.rdn(w1, wm1));
+            p4 = new Vector2(td, -td + this.height);
+
+            // generate the 4 control points
+            const vaX = Math.floor(this.rdn(w1, w0));
+            const minA = Math.min(p1.y, p2.y) - 10;
+            const v2a = Math.floor(this.rdn(w1, minA));
+            c1 = new Vector2(vaX, v2a);
+
+            const maxB = Math.max(p2.x, p3.x) + 10;
+            const vb = Math.floor(this.rdn(maxB, w0));
+            const v2b = Math.floor(this.rdn(-vb + this.height, vb));
+            c2 = new Vector2(vb, v2b);
+
+            const vc = Math.floor(this.rdn(w1, w0));
+            const maxC = Math.max(p3.y, p4.y) + 10;
+            const v2c = Math.floor(this.rdn(maxC, w0));
+            c3 = new Vector2(vc, v2c);
+
+            const minD = Math.min(p1.x, p4.x) - 10;
+            const vd = Math.floor(this.rdn(w1, minD));
             const v2d = Math.floor(this.rdn(vd, -vd + this.height));
             c4 = new Vector2(vd, v2d);
         }
@@ -232,10 +234,8 @@ class SVGgen {
         this.svgOrgPoints = [p1, p2, p3, p4];
         this.controlOrgPoints = [c1, c2, c3, c4];
 
-        this.checkBordersOrg(f + fl, p + pl);
-
-        const rgXf = foodR > 0 ? p2.x + fl : p2.x - fl;
-        const rgXp = poisonR > 0 ? p3.x + pl : p3.x - pl;
+        const rgXf = p2.x + fl;
+        const rgXp = p3.x + pl;
         
         this.svg = `<svg height="${this.height}" width="${this.width}" viewBox="0 0 ${this.width} ${this.height}" version="1.1" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">` +
                     `<radialGradient id="RadialGradient1" ` +
@@ -260,33 +260,21 @@ class SVGgen {
                     `Q ${c3.x} ${c3.y} ${p4.x} ${p4.y} Q ${c4.x} ${c4.y} ${p1.x} ${p1.y} Z" ` +
                     `fill="url(#RadialGradient1)" stroke="none" stroke-width="1" />`;
                     
-        if (foodR > 0) {
-            this.svg += `<path d="M ${p2.x} ${p2.y} Q ${p2.x + (fl / 2)}` +
+        
+        this.svg += `<path d="M ${p2.x} ${p2.y} Q ${p2.x + (fl / 2)}` +
             ` ${p2.y - controlPointF} ${p2.x + fl} ${p2.y}" ` +
             `stroke="${this.color}" stroke-width="${antennaWidth}" fill="transparent"/>` +
             `<circle cx=" ${p2.x + fl}" cy="${p2.y}" ` + // food
-            `r="${f}" stroke="none" stroke-width="1" fill="url(#RadialGradient2)" />`;
-        } else {
-            this.svg += `<path d="M ${p2.x} ${p2.y} Q ${p2.x - (fl / 2)}` +
-            ` ${p2.y - controlPointF} ${p2.x - fl} ${p2.y}" ` +
-            `stroke="${this.color}" stroke-width="${antennaWidth}" fill="transparent"/>` +
-            `<circle cx=" ${p2.x - fl}" cy="${p2.y}" ` + // food
-            `r="${f}" stroke="none" stroke-width="1" fill="url(#RadialGradient2)" />`;
-        }
+            `r="${f}" stroke="${this.colorLuminance(this.color, -0.3)}" ` +
+            `stroke-width="1" fill="url(#RadialGradient2)" />`;
+        
 
-        if (poisonR > 0) {
-            this.svg += `<path d="M ${p3.x} ${p3.y} Q ${p3.x + (pl / 2)}` +
+        this.svg += `<path d="M ${p3.x} ${p3.y} Q ${p3.x + (pl / 2)}` +
             ` ${p3.y + controlPointP} ${p3.x + pl} ${p3.y}" ` +
             `stroke="${this.color}" stroke-width="${antennaWidth}" fill="transparent"/>` +
             `<circle cx="${p3.x + pl}" cy="${p3.y}" ` +
-            `r="${p}" stroke="none" stroke-width="1" fill="url(#RadialGradient3)" />`;
-        } else {
-            this.svg += `<path d="M ${p3.x} ${p3.y} Q ${p3.x - (pl / 2)}` +
-            ` ${p3.y + controlPointP} ${p3.x - pl} ${p3.y}" ` +
-            `stroke="${this.color}" stroke-width="${antennaWidth}" fill="transparent"/>` +
-            `<circle cx="${p3.x - pl}" cy="${p3.y}" ` +
-            `r="${p}" stroke="none" stroke-width="1" fill="url(#RadialGradient3)" />`;
-        }
+            `r="${p}" stroke="${this.colorLuminance(this.color, -0.3)}" ` +
+            `stroke-width="1" fill="url(#RadialGradient3)" />`;
 
         this.svg += `</svg>`;
 
