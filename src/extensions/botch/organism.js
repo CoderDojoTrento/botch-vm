@@ -20,6 +20,7 @@ class Organism {
      * @param {RenderedTarget} target_ target (sprite)
      * @param {number} mass_ mass of the vehicle
      * @param {number} maxForce_ max force of the vehicle
+     * @param {boolean} org if true is an organism otherwise is an enemy
      * @param {Array} svgPoints_  svg points of the organism
      * @param {number} mutation how the organism can mutate [0 - 100]
      * @param {number} foodAttraction food attraction
@@ -28,7 +29,7 @@ class Organism {
      * @param {number} enemySight enemy sight
      * @param {number} orgSize organism size (mass)
      */
-    constructor (target_, mass_ = 1, maxForce_ = 0.5, svgPoints_, mutation,
+    constructor (target_, mass_ = 1, maxForce_ = 0.5, org, svgPoints_, mutation,
         foodAttraction, foodSight, enemyAttraction, enemySight, orgSize) {
 
         // utils
@@ -97,18 +98,18 @@ class Organism {
 
         // if is not defined, do not generate
         if (svgPoints_) {
-            this.svg = this.svgGen.generateOrgSVG3(
-                100, this.foodAttraction, this.enemyAttraction, this.max_att,
-                this.foodSight, this.enemySight, this.max_perception, svgPoints_, mutation);
-            this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
-
+            if (org) {
+                this.svg = this.svgGen.generateOrgSVG3(
+                    100, this.foodAttraction, this.enemyAttraction, this.max_att,
+                    this.foodSight, this.enemySight, this.max_perception, svgPoints_, mutation);
+                this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
+            }
+            this.target.setSize(this.size);
             /* for (let i = this.target.getCostumes().length - 1; i >= 0; i--) {
                 if (i !== this.target.currentCostume) {
                     this.target.deleteCostume(i); // hack troppo brutta ed instabile
                 }
             } */
-
-            this.target.setSize(this.size);
         } else {
             this.svg = this.svgGen.generateOrgSVG3(100, this.foodAttraction, this.enemyAttraction, this.max_att,
                 this.foodSight, this.enemySight, this.max_perception);
@@ -133,14 +134,16 @@ class Organism {
     /**
      * Compute the step needed to move
      * @param {Map} enemiesMap enemiesMap
+     * @param {Map} organismMap organismMap
      * @since botch-0.2
      */
-    stepOrganism (enemiesMap) {
+    stepOrganism (enemiesMap, organismMap) {
         this.refreshArgs(this.mass, this.maxForce);
-        this.behaveGeneralOrganism(enemiesMap);
         this.boundaries(
             this.runtime.constructor.STAGE_WIDTH - 30,
             this.runtime.constructor.STAGE_HEIGHT - 30);
+        this.separation(organismMap, 10);
+        this.behaveGeneralOrganism(enemiesMap);
         this.update();
         this.breathe();
     }
@@ -153,8 +156,8 @@ class Organism {
      */
     stepEnemy (organismMap, enemiesMap) {
         this.boundaries(
-            this.runtime.constructor.STAGE_WIDTH - 150,
-            this.runtime.constructor.STAGE_HEIGHT - 150);
+            this.runtime.constructor.STAGE_WIDTH - 50,
+            this.runtime.constructor.STAGE_HEIGHT - 50);
         this.separation(enemiesMap, 10);
         this.refreshArgs(this.mass, this.maxForce);
         this.behaveEnemy(organismMap);
@@ -265,7 +268,7 @@ class Organism {
     behaveEnemy (organism) {
         if (organism.size > 0) {
             const steerO = this.attack(organism);
-            steerO.mult(0.8); // TO DO, TO DEFINE
+            steerO.mult(1.1); // TO DO, TO DEFINE
             this.applyForce(steerO);
         }
     }
@@ -284,14 +287,12 @@ class Organism {
         const esc = 10;
 
         for (const o of organism.values()) {
-            if (!o.target.isOriginal) { // do not consider the original
-                const d = new Vector2(o.target.x, o.target.y).dist(new Vector2(this.target.x, this.target.y));
-                if (d < esc) {
-                    o.health -= 0.1;
-                } else if (d < record && d < perception) {
-                    record = d;
-                    closest = o;
-                }
+            const d = new Vector2(o.target.x, o.target.y).dist(new Vector2(this.target.x, this.target.y));
+            if (d < esc) {
+                o.health -= 0.1;
+            } else if (d < record && d < perception) {
+                record = d;
+                closest = o;
             }
         }
 
@@ -381,28 +382,15 @@ class Organism {
 
     /**
      * Create a clone of itself "Parthenogenesis"
-     * @returns {Organism} new copy Organism
-     * @since botch-0.1
-     */
-    cloneProb () {
-        if (Math.random() < 0.002) {
-            const newOrg = new Organism(this.target, 1, 0.5, this.svgGen.getOrgPoints(), this.mutation,
-                this.foodAttraction, this.foodSight, this.enemyAttraction, this.enemySight, this.size);
-            return newOrg;
-        }
-        return null;
-    }
-
-    /**
-     * Create a clone of itself "Parthenogenesis"
      * when called it return always a new child
      * @param {number} mutation how the organism will mutate [0 - 100]
      * @param {target} target new clone target
+     * @param {boolean} org if true is an organism otherwise is an enemy
      * @returns {Organism} new copy Organism
      * @since botch-0.2
      */
-    clone (mutation, target) {
-        const newOrg = new Organism(target, this.mass, 0.5, this.svgGen.getOrgPoints(), mutation,
+    clone (mutation, target, org) {
+        const newOrg = new Organism(target, this.mass, 0.5, org, this.svgGen.getOrgPoints(), mutation,
             this.foodAttraction, this.foodSight, this.enemyAttraction, this.enemySight, this.size);
         return newOrg;
     }
@@ -539,18 +527,16 @@ class Organism {
         let counter = 0;
         const steer = new Vector2(0, 0);
         for (const o of organism.values()) {
-            if (!o.target.isOriginal) { // do not consider the original
-                if (o.target.id !== this.target.id) {
-                    const d = new Vector2(o.target.x, o.target.y).dist(new Vector2(this.target.x, this.target.y));
-                    if (d < radius) {
-                        const diff = Vector2.sub(
-                            new Vector2(this.target.x, this.target.y), new Vector2(o.target.x, o.target.y)
-                        );
-                        diff.normalize();
-                        diff.div(d);
-                        steer.add(diff);
-                        counter++;
-                    }
+            if (o.target.id !== this.target.id) {
+                const d = new Vector2(o.target.x, o.target.y).dist(new Vector2(this.target.x, this.target.y));
+                if (d < radius) {
+                    const diff = Vector2.sub(
+                        new Vector2(this.target.x, this.target.y), new Vector2(o.target.x, o.target.y)
+                    );
+                    diff.normalize();
+                    diff.div(d);
+                    steer.add(diff);
+                    counter++;
                 }
             }
         }
