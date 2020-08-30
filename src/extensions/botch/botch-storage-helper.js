@@ -66,8 +66,8 @@ class BotchStorageHelper extends Helper {
          * In-memory storage for Botch assets
          *
          * Maps asset type to a map of asset ID to actual assets.
+         *
          * @type {Object.<AssetType, AssetIdMap>}
-         * Maps asset ID to asset.
          * @typedef {Object.<string, BuiltinAssetRecord>} AssetIdMap
          */
         this.assets = {};
