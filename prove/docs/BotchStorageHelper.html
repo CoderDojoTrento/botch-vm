@@ -3,7 +3,7 @@
 <head>
     
     <meta charset="utf-8">
-    <title>Comment - Documentation</title>
+    <title>BotchStorageHelper - Documentation</title>
     
     
     <script src="scripts/prettify/prettify.js"></script>
@@ -31,7 +31,7 @@
 
 <div id="main">
     
-    <h1 class="page-title">Comment</h1>
+    <h1 class="page-title">BotchStorageHelper</h1>
     
 
     
@@ -44,8 +44,11 @@
 <header>
     
         <h2>
-        Comment
+        BotchStorageHelper
         </h2>
+        
+            <div class="class-description"><p>In-memory storage for Botch assets</p>
+<p>Mostly copied from scratch-storage.js  BuiltinHelper</p></div>
         
     
 </header>
@@ -57,8 +60,107 @@
             
 
     
+    <h2>Constructor</h2>
+    
 
-    <h4 class="name" id="Comment"><span class="type-signature"></span>new Comment<span class="signature">(id, text, x, y, width, height, minimized)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="BotchStorageHelper"><span class="type-signature"></span>new BotchStorageHelper<span class="signature">()</span><span class="type-signature"></span></h4>
+
+    
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+    <dt class="tag-since">Since:</dt>
+    <dd class="tag-since"><ul class="dummy"><li>botch-0.1</li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+        </div>
+    
+
+    
+
+    
+
+    
+
+     
+
+    
+
+    
+
+    
+        <h3 class="subsection-title">Methods</h3>
+
+        
+            
+
+    
+
+    <h4 class="name" id="_store"><span class="type-signature"></span>_store<span class="signature">(assetType, dataFormat, data, id, name, parentId)</span><span class="type-signature"> &rarr; {string}</span></h4>
 
     
 
@@ -104,6 +206,13 @@
 
 
 
+<div class="description">
+    <p>Botch: we can use this one even if it supposed to be private,
+since as of (Aug 2020) using store() from ScratchStorage only stores
+via default webhelper stores</p>
+<p>Cache an asset for future lookups by ID.</p>
+</div>
+
 
 
 
@@ -139,6 +248,75 @@
 
         <tr>
             
+                <td class="name"><code>assetType</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">AssetType</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The type of the asset to cache.</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>dataFormat</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">DataFormat</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The dataFormat of the data for the cached asset.</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>data</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Buffer</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The data for the cached asset.</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
                 <td class="name"><code>id</code></td>
             
 
@@ -146,6 +324,9 @@
             
                 
 <span class="param-type">string</span>
+|
+
+<span class="param-type">number</span>
 
 
             
@@ -155,14 +336,14 @@
 
             
 
-            <td class="description last"><p>Id of the comment.</p></td>
+            <td class="description last"><p>The id for the cached asset.</p></td>
         </tr>
 
     
 
         <tr>
             
-                <td class="name"><code>text</code></td>
+                <td class="name"><code>name</code></td>
             
 
             <td class="type">
@@ -178,20 +359,20 @@
 
             
 
-            <td class="description last"><p>Text content of the comment.</p></td>
+            <td class="description last"><p>The name for the cached asset (Botch: we added it)</p></td>
         </tr>
 
     
 
         <tr>
             
-                <td class="name"><code>x</code></td>
+                <td class="name"><code>parentId</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">number</span>
+<span class="param-type">string</span>
 
 
             
@@ -201,99 +382,7 @@
 
             
 
-            <td class="description last"><p>X position of the comment on the workspace.</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>y</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>Y position of the comment on the workspace.</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>width</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The width of the comment when it is full size.</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>height</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>The height of the comment when it is full size.</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>minimized</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">boolean</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>Whether the comment is minimized.</p></td>
+            <td class="description last"><p>The id of the parent. If missing, use parent_0 (Botch: we added it)</p></td>
         </tr>
 
     
@@ -313,10 +402,51 @@
 
 
 
+<h5>Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>The calculated id of the cached asset, or the supplied id if the asset is mutable.</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">string</span>
+
+
+    </dd>
+</dl>
+
+    
 
 
         
-        </div>
+            
+
+    
+
+    <h4 class="name" id="cache"><span class="type-signature"></span>cache<span class="signature">(assetType, dataFormat, data, id)</span><span class="type-signature"> &rarr; {string}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+    <dt class="tag-since">Since:</dt>
+    <dd class="tag-since"><ul class="dummy"><li>botch-0.1</li></ul></dd>
     
 
     
@@ -325,12 +455,632 @@
 
     
 
-     
+    
+
+    
+
+    
+        <dt class="important tag-deprecated">Deprecated:</dt><dd><ul class="dummy"><li>Use BotchStorageHelper.store</li></ul></dd>
+    
+
+    
 
     
 
     
 
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description">
+    <p>Alias for store (old name of store)</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>assetType</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">AssetType</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The type of the asset to cache.</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>dataFormat</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">DataFormat</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The dataFormat of the data for the cached asset.</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>data</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Buffer</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The data for the cached asset.</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>id</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The id for the cached asset.</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>The calculated id of the cached asset, or the supplied id if the asset is mutable.</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">string</span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+        
+            
+
+    
+
+    <h4 class="name" id="get"><span class="type-signature"></span>get<span class="signature">(assetId)</span><span class="type-signature"> &rarr; (nullable) {Asset}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description">
+    <p>Synchronously fetch a cached asset for a given asset id. Returns null if not found.</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>assetId</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The id for the asset to fetch.</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>The asset for assetId, if it exists.</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Asset</span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+        
+            
+
+    
+
+    <h4 class="name" id="getAllTags"><span class="type-signature"></span>getAllTags<span class="signature">()</span><span class="type-signature"> &rarr; {Array.&lt;object>}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+    <dt class="tag-since">Since:</dt>
+    <dd class="tag-since"><ul class="dummy"><li>botch 0.1</li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description">
+    <p>Returns a list with all the tags of the sprites</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>list</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Array.&lt;object></span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+        
+            
+
+    
+
+    <h4 class="name" id="load"><span class="type-signature"></span>load<span class="signature">(assetType, assetId)</span><span class="type-signature"> &rarr; (nullable) {Promise.&lt;Asset>}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+    <dt class="tag-since">Since:</dt>
+    <dd class="tag-since"><ul class="dummy"><li>botch-0.1</li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+<div class="description">
+    <p>Fetch an asset but don't process dependencies.</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>assetType</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">AssetType</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The type of asset to fetch.</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>assetId</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>The ID of the asset to fetch: a project ID, MD5, etc.</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>A promise for the contents of the asset.</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Promise.&lt;Asset></span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+        
     
 
     
