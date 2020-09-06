@@ -176,7 +176,7 @@ class Organism {
      * assign a new generated enemy costume to the target
      */
     assignEnemyCostume () {
-        this.svg = this.svgGen.generateEnemySvg(50);
+        this.svg = this.svgGen.generateEnemySvg2();
         this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
     }
 
