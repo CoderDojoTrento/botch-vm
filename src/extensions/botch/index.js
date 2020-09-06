@@ -504,7 +504,7 @@ class Scratch3Botch {
                 this.createEnemyClone(util.target);
             }
         } else {
-            return 'Please, set it first as organism or enemies';
+            return 'Set it first as organism or enemy!';
         }
     }
 
@@ -561,7 +561,7 @@ class Scratch3Botch {
                 enemy.stepEnemy(this.organismMap, this.enemiesMap);
             }
         } else {
-            return 'Please, set it first as organism or enemies';
+            return 'Set it first as organism or enemy!';
         }
     }
 
@@ -598,7 +598,7 @@ class Scratch3Botch {
                 }
             }
         } else {
-            return 'Please, set it first as organism or enemies';
+            return 'Set it first as organism or enemy!';
         }
     }
     
