@@ -26,6 +26,7 @@ class Scratch3Botch {
     }
 
     constructor (runtime) {
+        this.debugMode = true;
         this.runtime = runtime;
         this.storage = this.runtime.storage;
         // map that contains the organism <id, org> or enemies
@@ -97,6 +98,12 @@ class Scratch3Botch {
         this.runtime.on('targetWasCreated', this._onTargetCreated);
     }
     
+    switchDebugMode (){
+        this.debugMode = !this.debugMode;
+        // TO DO would like to force refresh, tried to emit Runtime.PROJECT_CHANGED and didn't work
+        
+    }
+
     getInfo () {
         return {
             id: 'botch',
