@@ -1,9 +1,17 @@
-## scratch-vm
-#### Scratch VM is a library for representing, running, and maintaining the state of computer programs written using [Scratch Blocks](https://github.com/LLK/scratch-blocks).
+# botch-vm
 
-[![Build Status](https://travis-ci.org/LLK/scratch-vm.svg?branch=develop)](https://travis-ci.org/LLK/scratch-vm)
-[![Coverage Status](https://coveralls.io/repos/github/LLK/scratch-vm/badge.svg?branch=develop)](https://coveralls.io/github/LLK/scratch-vm?branch=develop)
-[![Greenkeeper badge](https://badges.greenkeeper.io/LLK/scratch-vm.svg)](https://greenkeeper.io/)
+#### Botch VM is a customization of Scratch VM to allow evolutionary computing.
+
+Botch is developed by non-profit [CoderDolomiti Association](https://www.coderdolomiti.it) and it is a very small customization of the original Scratch GUI developed by Massachussets Institute of Technology (MIT), which we thank for their great work. Authors of Botch VM are not affiliated in any way with MIT.
+
+Specifically, Botch VM is a library for representing, running, and maintaining the state of computer programs written using [Scratch Blocks](https://github.com/LLK/scratch-blocks).
+
+Botch VM is a dependency of [Botch GUI project](https://github.com/CoderDojoTrento/botch-gui), where you can find most information about the project.
+
+[![Build Status](https://travis-ci.org/CoderDojoTrento/botch-vm.svg?branch=prove)](https://travis-ci.org/CoderDojoTrento/botch-vm)
+
+
+## ------- ORIGINAL  SCRATCH-VM README   
 
 ## Installation
 This requires you to have Git and Node.js installed.
