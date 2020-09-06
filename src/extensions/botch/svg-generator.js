@@ -450,15 +450,17 @@ class SVGgen {
         <stop stop-color="#fdfdfd" offset="0"/>
         <stop stop-color="#b6b6b6" offset="1"/>
         </linearGradient>
-        <radialGradient id="d" cx="76.323" cy="69.958" r="74.566" 
-        gradientTransform="matrix(.51601 .55655 -.3384 .31375 5.6627 -45.855)" gradientUnits="userSpaceOnUse">
-        <stop stop-color="#fec800" offset="0"/>
-        <stop stop-color="#ab8507" offset="1"/>
+        <radialGradient id="d" cx="82.679" cy="50.613" r="74.566" 
+        gradientTransform="matrix(-.68194 .046763 -.03157 -.46038 112.86 53.149)" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#fe5400" offset="0"/>
+        <stop stop-color="#722700" offset="1"/>
         </radialGradient>
         <radialGradient id="c" cx="144.88" cy="82.263" r="15.505" 
-        gradientTransform="matrix(.46327 0 0 .46327 -13.985 -13.903)" gradientUnits="userSpaceOnUse" xlink:href="#a"/>
+        gradientTransform="matrix(.46327 0 0 .46327 -8.8205 -18.34)" 
+        gradientUnits="userSpaceOnUse" xlink:href="#a"/>
         <radialGradient id="b" cx="144.88" cy="82.263" r="15.505" 
-        gradientTransform="matrix(.46327 0 0 .46327 -33.424 -13.633)" gradientUnits="userSpaceOnUse" xlink:href="#a"/>
+        gradientTransform="matrix(.46327 0 0 .46327 -8.3359 3.7933)" 
+        gradientUnits="userSpaceOnUse" xlink:href="#a"/>
         </defs>
         <metadata>
         <rdf:RDF>
@@ -469,31 +471,25 @@ class SVGgen {
         </cc:Work>
         </rdf:RDF>
         </metadata>
-        <path d="m69.606 35.319c0 1.9784-0.16632 18.381-0.48572 
-        20.269-1.4624 8.6417-4.459 12.525-11.071 13.898-3.4509 
-        0.71673-7.4303-10.856-11.758-10.862-3.0344-0.0047-6.5572 
-        10.862-11.05 10.862-4.7077 0-7.6997-10.846-11.789-11.064-4.2845-0.22935-9.807 12.466-13.013 
-        11.064-4.4651-1.9526-7.6857-7.457-9.1083-13.898-0.53225-2.4098-0.81286-17.699-0.81286-20.269-9.3e-7 
-        -19.078 15.466-34.544 34.544-34.544 19.078 9.3e-7 34.544 15.466 34.544 34.544z" fill="url(#d)" 
-        stroke-dasharray="1.85309, 1.85309" stroke-opacity=".98824" stroke-width=".46327"/>
-        <circle cx="36.525" cy="28.525" r="7.183" fill="url(#b)" stroke-dasharray="1.85309, 
-        1.85309" stroke-opacity=".98824" stroke-width=".46327"/>
-        <circle cx="55.964" cy="28.255" r="7.183" fill="url(#c)" stroke-dasharray="1.85309, 
-        1.85309" stroke-opacity=".98824" stroke-width=".46327"/>
-        <circle cx="39.568" cy="29.55" r="3.4744" stroke-dasharray="1.85309, 1.85309" 
+        <path d="m34.926 69.729c-1.9784 
+        0-18.381-0.16632-20.269-0.48572-8.6417-1.4624-12.525-4.459-13.898-11.071-0.71673-3.4509 
+        10.856-7.4303 10.862-11.758 0.0047-3.0344-10.862-6.5572-10.862-11.05 0-4.7077 10.846-7.6997 
+        11.064-11.789 0.22935-4.2845-12.466-9.807-11.064-13.013 1.9526-4.4651 7.457-7.6857 13.898-9.1083 
+        2.4098-0.53225 17.699-0.81286 20.269-0.81286 19.078-9.3e-7 34.544 15.466 34.544 34.544-1e-6 
+        19.078-15.466 34.544-34.544 34.544z" fill="url(#d)" stroke-dasharray="1.85309, 1.85308999999999990" 
         stroke-opacity=".98824" stroke-width=".46327"/>
-        <circle cx="59.105" cy="29.067" r="3.4744" stroke-dasharray="1.85309, 1.85309" 
+        <circle cx="61.614" cy="45.951" r="7.183" fill="url(#b)" stroke-dasharray="1.85309, 1.85309" 
         stroke-opacity=".98824" stroke-width=".46327"/>
-        <path d="m29.45 16.82 12.95 3.6955" fill="none" stroke="#000" stroke-linecap="round" 
+        <circle cx="61.129" cy="23.818" r="7.183" fill="url(#c)" stroke-dasharray="1.85309, 1.85309" 
+        stroke-opacity=".98824" stroke-width=".46327"/>
+        <circle cx="64.851" cy="46.086" r="3.4744" stroke-dasharray="1.85309, 1.85309" stroke-opacity=".98824" 
+        stroke-width=".46327"/>
+        <circle cx="64.294" cy="24.347" r="3.4744" stroke-dasharray="1.85309, 1.85309" stroke-opacity=".98824" 
+        stroke-width=".46327"/>
+        <path d="m55.412 38.61-5.9871 11.179" fill="none" stroke="#000" stroke-linecap="round" 
         stroke-linejoin="round" stroke-width="1.7442" style="paint-order:normal"/>
-        <path d="m60.44 14.435-9.1704 5.5912" fill="none" stroke="#000" stroke-linecap="round" 
+        <path d="m55.294 31.14-5.9871-11.179" fill="none" stroke="#000" stroke-linecap="round" 
         stroke-linejoin="round" stroke-width="1.7442" style="paint-order:normal"/>
-        <path d="m44.019 40.426a7.9978 7.0746 0 0 0-2.0696 4.7488 7.9978 7.0746 0 0 0 7.9979 
-        7.0746 7.9978 7.0746 0 0 0 7.9977-7.0746 7.9978 7.0746 0 0 0-3.0617-5.5663l-1.6435 
-        4.2149-2.97-3.8551-1.8139 5.7076-4.3705-5.1517z" style="paint-order:normal"/>
-        <path d="m44.019 40.426 0.06632 0.09815 4.3705 5.1517 1.8139-5.7076 2.97 3.8551 
-        1.6435-4.2149a7.9978 7.0746 0 0 0-4.936-1.5082 7.9978 7.0746 0 0 0-5.9283 2.3258z" 
-        fill="#fff" style="paint-order:normal"/>
         </svg>
         `;
     }
