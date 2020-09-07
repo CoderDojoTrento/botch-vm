@@ -87,7 +87,7 @@ class BotchUtil {
         vmCostumes.forEach((costume, i) => {
             costume.name = `org_${i + 1}`;
         });
-        this.handleNewCostume(vmCostumes, id); // Tolto .then(
+        return this.handleNewCostume(vmCostumes, id); // Tolto .then(
     }
 
     addCostumeFromBuffer (dataBuffer, id) {
@@ -100,17 +100,18 @@ class BotchUtil {
             costumeFormat_,
             dataBuffer
         );
-        this.handleCostume([vmCostume], id);
+        return this.handleCostume([vmCostume], id);
     }
 
     /**
      * Assign a new costume (SVG) to the selected target (id)
      * @param {string} fileData string of the svg
      * @param {string?} id id of the target
+     * @returns {Promise} when the costumes has been added
      * @since botch-0.1
      */
     uploadCostumeEdit (fileData, id) {
-        this.addCostumeFromBuffer(new Uint8Array((new _TextEncoder()).encode(fileData)), id);
+        return this.addCostumeFromBuffer(new Uint8Array((new _TextEncoder()).encode(fileData)), id);
     }
 
     // </LOAD COSTUMES METHODS>

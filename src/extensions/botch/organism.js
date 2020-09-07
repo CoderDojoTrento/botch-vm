@@ -10,6 +10,7 @@ const Vector2 = require('./vector2');
 const MathUtil = require('../../util/math-util');
 const svgGen = require('./svg-generator');
 const BotchUtil = require('./botch_util');
+const log = require('../../util/log');
 
 /**
  * @since botch-0.1
@@ -39,6 +40,7 @@ class Organism {
         this.storage = this.runtime.storage;
         this.svgGen = new svgGen(100, 100);
         this.botchUtil = new BotchUtil(this.runtime);
+        this.prom = null;
         // vehicle proprieties
         this.acceleration = new Vector2(0, 0);
         this.velocity = new Vector2(this.botchUtil.rdn(-2, 2), this.botchUtil.rdn(-2, 2));
@@ -102,7 +104,11 @@ class Organism {
                 this.svg = this.svgGen.generateOrgSVG3(
                     100, this.foodAttraction, this.enemyAttraction, this.max_att,
                     this.foodSight, this.enemySight, this.max_perception, svgPoints_, mutation);
-                this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
+                /* this.prom = this.botchUtil.uploadCostumeEdit(this.svg, this.target.id).then(
+                    obj => {
+                        log.log(obj);
+                    }
+                ); */
             }
             this.target.setSize(this.size);
             /* for (let i = this.target.getCostumes().length - 1; i >= 0; i--) {
@@ -166,10 +172,11 @@ class Organism {
 
     /**
      * assign the new generated costume to the target
+     * @returns {Promise} when the costume is uploaded
      */
     assignOrgCostume () {
-        this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
         this.target.setSize(this.size);
+        return this.botchUtil.uploadCostumeEdit(this.svg, this.target.id);
     }
 
     /**
