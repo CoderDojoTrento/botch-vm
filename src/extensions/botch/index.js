@@ -26,7 +26,7 @@ class Scratch3Botch {
     }
 
     constructor (runtime) {
-        this.debugMode = true;
+        this.debugMode = false;
         this.runtime = runtime;
         this.storage = this.runtime.storage;
         // map that contains the organism <id, org> or enemies
