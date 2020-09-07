@@ -226,7 +226,15 @@ class BotchStorageHelper extends Helper {
         }
         return ret;
     }
-    
+
+    /**
+     * Resets the store
+     *
+     * @since botch-0.3
+     */
+    clear (){
+        this.assets = {};
+    }
 
 }
 

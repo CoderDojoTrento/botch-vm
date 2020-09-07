@@ -96,7 +96,10 @@ class Scratch3Botch {
         // copy the custom state when clone
         this._onTargetCreated = this._onTargetCreated.bind(this);
         this.runtime.on('targetWasCreated', this._onTargetCreated);
+        this.resetStorage = this.resetStorage.bind(this);
+        this.runtime.on('PROJECT_START', this.resetStorage);
     }
+
     
     switchDebugMode (){
         this.debugMode = !this.debugMode;
@@ -768,6 +771,14 @@ class Scratch3Botch {
         
         retp.md5 = newId;
         return retp;
+    }
+
+    /**
+     * @since botch-0.3
+     */
+    resetStorage (){
+        this.storageHelper.clear();
+        this.runtime.emit(Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
     }
     
     /**
