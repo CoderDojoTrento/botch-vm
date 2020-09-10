@@ -10,7 +10,7 @@ const Vector2 = require('./vector2');
 const MathUtil = require('../../util/math-util');
 const svgGen = require('./svg-generator');
 const BotchUtil = require('./botch_util');
-const log = require('../../util/log');
+
 
 /**
  * @since botch-0.1

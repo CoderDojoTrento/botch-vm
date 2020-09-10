@@ -793,8 +793,12 @@ class Scratch3Botch {
      * @since botch-0.3
      */
     resetStorage (){
-        this.storageHelper.clear();
-        this.runtime.emit(Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
+        if (this.storageHelper){
+            this.storageHelper.clear();
+            this.runtime.emit(Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
+        } else {
+            log.log('this.storageHelper undefined, skipping resetStorage');
+        }
     }
     
     /**
