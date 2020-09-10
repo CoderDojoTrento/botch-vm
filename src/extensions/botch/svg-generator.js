@@ -102,9 +102,9 @@ class SVGgen {
      * y = -x + this.height
      * if parentPoints point is defined, it create a shape with similar points
      * @param {number} dim dimension of the svg (square)
-     * @param {number} foodR food attraction
-     * @param {number} poisonR poison attraction
-     * @param {number} magR max poison or food attraction
+     * @param {number} foodA food attraction
+     * @param {number} poisonA poison attraction
+     * @param {number} magA max poison or food attraction
      * @param {number} foodS food distance
      * @param {number} poisonS poison distance
      * @param {number} magD max poison or food distance
@@ -122,11 +122,11 @@ class SVGgen {
      * .
      * fa piuttosto schifo da vedere come funzione...
      */
-    generateOrgSVG3 (dim, foodR, poisonR, magR, foodS, poisonS, magD, parentPoints, mutation) {
-        const f = MathUtil.scale(foodR, -magR, magR, 0, 15);
-        const p = MathUtil.scale(poisonR, -magR, magR, 0, 15);
-        const fl = MathUtil.scale(foodS, 0, magD, 0, 50);
-        const pl = MathUtil.scale(poisonS, 0, magD, 0, 50);
+    generateOrgSVG3 (dim, foodA, poisonA, magA, foodS, poisonS, magD, parentPoints, mutation) {
+        const fr = MathUtil.scale(foodS, 0, magD, 0, 15);
+        const pr = MathUtil.scale(poisonS, 0, magD, 0, 15);
+        const fl = MathUtil.scale(foodA, -magA, magA, 0, 50);
+        const pl = MathUtil.scale(poisonA, -magA, magA, 0, 50);
         const antennaWidth = 5;
         const controlPointF = MathUtil.scale(foodS, 0, magD, 0, 10);
         const controlPointP = MathUtil.scale(poisonS, 0, magD, 0, 10);
@@ -136,7 +136,7 @@ class SVGgen {
         // resize the canvas to be a square
         this.width = dim;
         this.height = dim;
-        const maxMargin = Math.max(fl + f, pl + p);
+        const maxMargin = Math.max(fl + fr, pl + pr);
         this.width += maxMargin * 2;
         this.height = this.width;
         
@@ -237,6 +237,7 @@ class SVGgen {
         const rgXf = p2.x + fl;
         const rgXp = p3.x + pl;
         
+        // BODY
         this.svg = `<svg height="${this.height}" width="${this.width}" viewBox="0 0 ${this.width} ${this.height}" version="1.1" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">` +
                     `<radialGradient id="RadialGradient1" ` +
                     `cx="${this.width / 2}" cy="${this.height / 2}" r="${this.width / 3}" ` +
@@ -245,13 +246,13 @@ class SVGgen {
                     `<stop offset="1" style="stop-color:${this.colorLuminance(this.color, -0.2)}"></stop> ` +
                     `</radialGradient>` +
                     `<radialGradient id="RadialGradient2" ` +
-                    `cx="${rgXf}" cy="${p2.y}" r="${f / 3}" ` +
+                    `cx="${rgXf}" cy="${p2.y}" r="${fr / 3}" ` +
                     `gradientUnits="userSpaceOnUse"> ` +
                     `<stop offset="0" style="stop-color:${this.colorLuminance(this.color, -0.9)}"></stop> ` +
                     `<stop offset="1" style="stop-color:${this.colorLuminance(this.color, 0.9)}"></stop> ` +
                     `</radialGradient>` +
                     `<radialGradient id="RadialGradient3" ` +
-                    `cx="${rgXp}" cy="${p3.y}" r="${p / 3}" ` +
+                    `cx="${rgXp}" cy="${p3.y}" r="${pr / 3}" ` +
                     `gradientUnits="userSpaceOnUse"> ` +
                     `<stop offset="0" style="stop-color:${this.colorLuminance(this.color, -0.9)}"></stop> ` +
                     `<stop offset="1" style="stop-color:${this.colorLuminance(this.color, 0.9)}"></stop> ` +
@@ -260,20 +261,20 @@ class SVGgen {
                     `Q ${c3.x} ${c3.y} ${p4.x} ${p4.y} Q ${c4.x} ${c4.y} ${p1.x} ${p1.y} Z" ` +
                     `fill="url(#RadialGradient1)" stroke="none" stroke-width="1" />`;
                     
-        
+        // LEFT EYE AND ANTENNA
         this.svg += `<path d="M ${p2.x} ${p2.y} Q ${p2.x + (fl / 2)}` +
             ` ${p2.y - controlPointF} ${p2.x + fl} ${p2.y}" ` +
             `stroke="${this.color}" stroke-width="${antennaWidth}" fill="transparent"/>` +
             `<circle cx=" ${p2.x + fl}" cy="${p2.y}" ` + // food
-            `r="${f}" stroke="${this.colorLuminance(this.color, -0.3)}" ` +
+            `r="${fr}" stroke="${this.colorLuminance(this.color, -0.3)}" ` +
             `stroke-width="1" fill="url(#RadialGradient2)" />`;
         
-
+        // RIGHT EYE AND ANTENNA
         this.svg += `<path d="M ${p3.x} ${p3.y} Q ${p3.x + (pl / 2)}` +
             ` ${p3.y + controlPointP} ${p3.x + pl} ${p3.y}" ` +
             `stroke="${this.color}" stroke-width="${antennaWidth}" fill="transparent"/>` +
             `<circle cx="${p3.x + pl}" cy="${p3.y}" ` +
-            `r="${p}" stroke="${this.colorLuminance(this.color, -0.3)}" ` +
+            `r="${pr}" stroke="${this.colorLuminance(this.color, -0.3)}" ` +
             `stroke-width="1" fill="url(#RadialGradient3)" />`;
 
         this.svg += `</svg>`;

@@ -639,7 +639,7 @@ class Scratch3Botch {
                 if (newClone) {
                     this.runtime.addTarget(newClone);
                     const newOrg = enemy.clone(mr, newClone, false);
-                    newClone.clearEffects();
+                    // newClone.clearEffects();
                     this.enemiesMap.set(newClone.id, newOrg);
                 }
             }
