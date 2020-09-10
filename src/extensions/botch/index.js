@@ -861,7 +861,6 @@ class Scratch3Botch {
      * the sprite in a format suitable to be viewed in a library panel
      */
     loadLibrarySprite (id) {
-        const sb3 = require('../../serialization/sb3');
         const JSZip = require('jszip');
 
         const storage = this.storage;
