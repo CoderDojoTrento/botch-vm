@@ -71,6 +71,7 @@ class BotchStorageHelper extends Helper {
          * @typedef {Object.<string, BuiltinAssetRecord>} AssetIdMap
          */
         this.assets = {};
+        this.size = 0;
 
         BotchBuiltinAssets.forEach(assetRecord => {
             assetRecord.id = this._store(assetRecord.type, assetRecord.format,
@@ -234,6 +235,7 @@ class BotchStorageHelper extends Helper {
      */
     clear (){
         this.assets = {};
+        this.size = 0;
     }
 
 }

@@ -19,6 +19,10 @@ const DEFAULT_BOTCH_SPRITES = require('./default-botch-sprites.js');
 const log = require('../../util/log');
 const md5 = require('js-md5');
 const MathUtil = require('../../util/math-util');
+const sb3 = require('../../serialization/sb3');
+const {serializeSounds, serializeCostumes} = require('../../serialization/serialize-assets');
+const StringUtil = require('../../util/string-util');
+
 class Scratch3Botch {
 
     static get BOTCH_STORAGE_HELPER_UPDATE (){
@@ -247,6 +251,22 @@ class Scratch3Botch {
      */
     static get ENEMY_TYPE () {
         return 'enemy';
+    }
+
+    /**
+     * @return {int} maximum allowed number of sprites in storage (including parent_0).
+     * @since botch-0.3
+     */
+    static get MAX_STORAGE (){
+        return 50;
+    }
+
+    /**
+     * @return {int} Storage full code.
+     * @since botch-0.3
+     */
+    static get STORAGE_FULL (){
+        return 1;
     }
 
     /**
@@ -652,6 +672,38 @@ class Scratch3Botch {
         }
     }
 
+    serializeSprite (targetId, newName = ''){
+        if (!targetId){
+            throw new Error(`Got empty id:${targetId}!`);
+        }
+        if (newName){
+            if (!newName.trim()){
+                throw new Error('Got an all blank name for sprite !');
+            }
+        }
+                
+
+        const soundDescs = serializeSounds(this.runtime, targetId);
+        // log.log('md5(soundDescs)', md5(soundDescs));
+        const costumeDescs = serializeCostumes(this.runtime, targetId);
+        // log.log('md5(costumeDescs)', md5(costumeDescs));
+        const serialized = sb3.serialize(this.runtime, targetId);
+        
+        if (newName){
+            serialized.name = newName;
+        }
+        const spriteJson = StringUtil.stringify(serialized);
+
+        return {spriteJson: spriteJson,
+            soundDescs: soundDescs,
+            costumeDescs: costumeDescs};
+        // log.log('md5(spriteJson)', md5(spriteJson));
+
+        // Botch: would have been nicer to calculate md5 of the zip
+        // but md5 varies between zips: https://github.com/Stuk/jszip/issues/590
+        
+    }
+
     /**  Copied from virtual-machine.js
      *
       * Exports a sprite in the sprite3 format.
@@ -671,39 +723,13 @@ class Scratch3Botch {
       * @since botch-0.1
       */
     exportSprite (targetId, optZipType, newName = '') {
-        if (!targetId){
-            throw new Error(`Got empty id:${targetId}!`);
-        }
-        if (newName){
-            if (!newName.trim()){
-                throw new Error('Got an all blank name for sprite !');
-            }
-        }
-        const JSZip = require('jszip');
-        const sb3 = require('../../serialization/sb3');
-        const {serializeSounds, serializeCostumes} = require('../../serialization/serialize-assets');
-        const StringUtil = require('../../util/string-util');
-
-        const soundDescs = serializeSounds(this.runtime, targetId);
-        // log.log('md5(soundDescs)', md5(soundDescs));
-        const costumeDescs = serializeCostumes(this.runtime, targetId);
-        // log.log('md5(costumeDescs)', md5(costumeDescs));
-        const serialized = sb3.serialize(this.runtime, targetId);
         
-        if (newName){
-            serialized.name = newName;
-        }
-        const spriteJson = StringUtil.stringify(serialized);
-
-        // log.log('md5(spriteJson)', md5(spriteJson));
-
-        // Botch: would have been nicer to calculate md5 of the zip
-        // but md5 varies between zips: https://github.com/Stuk/jszip/issues/590
-        const theMd5 = md5(spriteJson + StringUtil.stringify(soundDescs.concat(costumeDescs)));
-
+        const ser = this.serializeSprite(targetId, newName);
+        const theMd5 = Scratch3Botch.calcSpriteMd5(ser.spriteJson, ser.soundDescs, ser.costumeDescs);
+        const JSZip = require('jszip');
         const zip = new JSZip();
-        zip.file('sprite.json', spriteJson);
-        this._addFileDescsToZip(soundDescs.concat(costumeDescs), zip);
+        zip.file('sprite.json', ser.spriteJson);
+        this._addFileDescsToZip(ser.soundDescs.concat(ser.costumeDescs), zip);
 
         const p = zip.generateAsync({
             type: typeof optZipType === 'string' ? optZipType : 'blob',
@@ -716,6 +742,10 @@ class Scratch3Botch {
         p.md5 = theMd5; // monkey patching
         return p;
 
+    }
+
+    static calcSpriteMd5 (spriteJson, soundDescs, costumeDescs){
+        return md5(spriteJson + StringUtil.stringify(soundDescs.concat(costumeDescs)));
     }
 
     /** Stores a sprite from runtime into custom storageHelper.
@@ -743,9 +773,29 @@ class Scratch3Botch {
             }
         }
         
+        
+        if (this.storageHelper.size >= Scratch3Botch.MAX_STORAGE){
+            const p = new Promise(() => ({}));
+            // const ser = this.serializeSprite(id, newName);
+            const uuidv4 = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+                const r = Math.random() * 16 | 0; const v = (c === 'x') ? r : ((r & 0x3) | 0x8);
+                return v.toString(20);
+            });
+            
+              
+            p.md5 = uuidv4(); // fast and furious
+              
+            // p.md5 = Scratch3Botch.calcSpriteMd5(ser.spriteJson, ser.soundDescs, ser.costumeDescs);
+            p.response = Scratch3Botch.STORAGE_FULL;
+            return p;
+        }
+        
         const p = this.exportSprite(id, 'uint8array', newName);
         const newId = p.md5;
 
+        // we need it here as this method call could be asynchronous when populating
+        // and yes, it's a hack
+        this.storageHelper.size += 1;
         
         const retp = p.then(data => {
 
@@ -786,6 +836,7 @@ class Scratch3Botch {
         });
         
         retp.md5 = newId;
+        retp.response = 0; // ok
         return retp;
     }
 
