@@ -22,6 +22,7 @@ const MathUtil = require('../../util/math-util');
 const sb3 = require('../../serialization/sb3');
 const {serializeSounds, serializeCostumes} = require('../../serialization/serialize-assets');
 const StringUtil = require('../../util/string-util');
+const JSZip = require('jszip');
 
 class Scratch3Botch {
 
@@ -726,7 +727,7 @@ class Scratch3Botch {
         
         const ser = this.serializeSprite(targetId, newName);
         const theMd5 = Scratch3Botch.calcSpriteMd5(ser.spriteJson, ser.soundDescs, ser.costumeDescs);
-        const JSZip = require('jszip');
+        
         const zip = new JSZip();
         zip.file('sprite.json', ser.spriteJson);
         this._addFileDescsToZip(ser.soundDescs.concat(ser.costumeDescs), zip);
@@ -861,7 +862,7 @@ class Scratch3Botch {
      * the sprite in a format suitable to be viewed in a library panel
      */
     loadLibrarySprite (id) {
-        const JSZip = require('jszip');
+        
 
         const storage = this.storage;
 
