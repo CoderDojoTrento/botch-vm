@@ -111,12 +111,17 @@ class Scratch3Botch {
         return 1;
     }
 
+    static calcSpriteMd5 (spriteJson, soundDescs, costumeDescs){
+        return md5(spriteJson + StringUtil.stringify(soundDescs.concat(costumeDescs)));
+    }
+
     constructor (runtime) {
         this.debugMode = false;
         this.runtime = runtime;
         this.storage = this.runtime.storage;
-        this.storageQueueLength = 0;
-        this.storageLastPromise = null;
+        this.storageRequestsSize = 0;
+        this.storageLastRequestPromise = null;
+        this.storageRequests = {};
         // map that contains the organism <id, org> or enemies
         this.organismMap = new Map();
         this.enemiesMap = new Map();
@@ -160,6 +165,7 @@ class Scratch3Botch {
 
         // show the organism when stopped
         this.runtime.on(Runtime.PROJECT_STOP_ALL, (() => {
+            this.resetStoragePendingRequests();
             if (this.organismMap && this.organismMap.size > 0) {
                 for (const org of this.organismMap.values()) {
                     org.target.setVisible(true);
@@ -186,6 +192,7 @@ class Scratch3Botch {
         this.runtime.on('targetWasCreated', this._onTargetCreated);
         this.resetStorage = this.resetStorage.bind(this);
         this.runtime.on('PROJECT_START', this.resetStorage);
+        
     }
 
     
@@ -755,25 +762,39 @@ class Scratch3Botch {
         );
     }
 
-    static calcSpriteMd5 (spriteJson, soundDescs, costumeDescs){
-        return md5(spriteJson + StringUtil.stringify(soundDescs.concat(costumeDescs)));
-    }
-
-
-    _storeSprite (id, newName = ''){
+    _storeSprite (id, {newName, group}){
         log.log('Botch: _storeSprite is called');
 
-        return this.exportSprite(id, 'uint8array', newName)
-            .then(({newId, data}) => {
+        const req = id + newName + group;
 
+        const p = this.exportSprite(id, 'uint8array', newName);
+        return p.then(({newId, data}) => {
+
+            this.storageRequestsSize -= 1;
+            if (!this.storageRequests[group]) {
+                throw new Error(`Botch: sprite storage request was cancelled (group ${group} does not exists anymore)`);
+            }
+            if (!this.storageRequests[group].has(req)){
+                throw new Error(`Botch: sprite storage request was cancelled (key ${req} does not exists anymore in group ${group})`);
+            }
+            
+            let res = null;
+            if (this.storageHelper.size >= Scratch3Botch.MAX_STORAGE){
+                log.log('Botch: storage full!');
+                    
+                res = {
+                    md5: newId,
+                    response: Scratch3Botch.STORAGE_FULL
+                };
+            } else {
                 const target = this.runtime.getTargetById(id);
                 log.log('Botch: using newId from md5:', newId);
-            
+                
                 let parentId = 'parent_0';
-        
+            
                 if (target.variables &&
-                target.variables.botch_parent &&
-                target.variables.botch_parent.value){
+                    target.variables.botch_parent &&
+                    target.variables.botch_parent.value){
                     const candidate = target.variables.botch_parent.value;
                     if (candidate !== 'parent_0'){
                         if (candidate in this.storageHelper.assets){
@@ -785,9 +806,9 @@ class Scratch3Botch {
                 } else {
                     log.warn('Trying to store sprite with no valid parentId, defaulting to parent_0');
                 }
-            
+                
                 // log.log('Botch: using newId from md5:', newId);
-
+    
                 this.storageHelper._store(
                     this.storage.AssetType.Sprite,
                     this.storage.DataFormat.SB3,
@@ -799,13 +820,18 @@ class Scratch3Botch {
                 // log.log('Botch: emitting ', Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
                 this.runtime.emit(Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
                 // log.log('Botch: stored sprite with newId', newId);
-                this.storageQueueLength -= 1;
-                return {
+                res = {
                     md5: newId,
                     response: 0 // ok
                 };
-            });
-        
+            }
+            
+            log.log('Botch _storeSprite', p);
+            this.storageRequests[group].delete(req);
+            const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+            return wait(Scratch3Botch.STORAGE_DELAY)
+                .then(() => (res));
+        });
     }
 
     /** Stores a sprite from runtime into custom storageHelper.
@@ -817,67 +843,71 @@ class Scratch3Botch {
      *  Does *not* change the current runtime.
      *
      * @param {string} id  the sprite to store
-     * @param {string} newName  new name for the sprite, if unspecified uses existing one.
-     * @returns {Promise} A promise with an extra md5 field. NOTE: the md5 is *not* the md5 of the zipped data, because zips md5 is not stable: https://github.com/Stuk/jszip/issues/590
+     * @param {{newName:string, group: string}} options newName   for the sprite, if unspecified uses existing one. the group to which the storage request belongs to.
+     * @returns {Promise} A promise returning {md5, response}. NOTE: the md5 is *not* the md5 of
+     * the zipped data, because zips md5 is not stable: https://github.com/Stuk/jszip/issues/590
      * @since botch-0.1
      */
-    storeSprite (id, newName = '') {
+    storeSprite (id, options = {newName: '', group: 'default'}) {
         // log.log('Botch: trying to store sprite with original id', id);
         
-        log.log('Botch: storeSprite storageQueue', this.storageQueue);
+        options = {newName: '', group: 'default', ...options};
+        
 
         if (!id){
             throw new Error(`Got empty id:${id}!`);
         }
-        if (newName){
-            if (!newName.trim()){
+        if (options.newName){
+            if (!options.newName.trim()){
                 throw new Error('Got all blank name for sprite !');
             }
         }
+        if (!this.storageRequests[options.group]){
+            this.storageRequests[options.group] = new Set();
+        }
+        const req = id + options.newName + options.group;
+        this.storageRequests[options.group].add(req);
+        
 
-        let shortP = null;
-        if ((this.storageHelper.size + this.storageQueueLength) >= Scratch3Botch.MAX_STORAGE){
-            log.log('Botch: storage full, returning early');
-                
-            const ser = this.serializeSprite(id, newName);
-            const theMd5 = Scratch3Botch.calcSpriteMd5(ser.spriteJson, ser.soundDescs, ser.costumeDescs);
-            shortP = new Promise(resolve => {
-                this.storageQueueLength -= 1;
-                resolve({
-                    md5: theMd5,
-                    response: Scratch3Botch.STORAGE_FULL
+        let p = null;
+        if (!this.storageLastRequestPromise){
+            p = this._storeSprite(id, options);
+            this.storageRequestsSize = 0;
+        } else { // delay after last is resolved
+            p = this.storageLastRequestPromise
+                .catch(err => {
+                    log.log(err.message);
+                })
+                .then(() => this._storeSprite(id, options))
+                .catch(err => {
+                    log.log(err.message);
                 });
-            });
         }
-
-        const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-                                        
-        if (!this.storageLastPromise){
-            const p = shortP ? shortP : this._storeSprite(id, newName);
-            this.storageLastPromise = p;
-            this.storageQueueLength = 1;
-            return p;
-        }
-        // else delay after last is resolved
-        const p = this.storageLastPromise
-            .then(() => wait(Scratch3Botch.STORAGE_DELAY))
-            .then(() => {
-                if (shortP){
-                    return shortP;
-                }
-                return this._storeSprite(id, newName);
-            });
-        this.storageLastPromise = p;
-        this.storageQueueLength += 1;
+        
+        this.storageRequestsSize += 1;
+        this.storageLastRequestPromise = p;
         return p;
     }
 
+    /**
+     *
+     * @since botch-0.3
+     */
+    resetStoragePendingRequests (){
+        // just to be extra-sure we don't have stuff around
+        for (const requestGroup in this.storageRequests){
+            this.storageRequests[requestGroup].clear();
+        }
+        this.storageRequests = [];
+    }
+    
     /**
      * @since botch-0.3
      */
     resetStorage (){
         if (this.storageHelper){
             this.storageHelper.clear();
+            this.resetStoragePendingRequests();
             this.runtime.emit(Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
         } else {
             log.log('this.storageHelper undefined, skipping resetStorage');
@@ -1017,16 +1047,16 @@ class Scratch3Botch {
         log.log('testStoreSprite...');
         // const id = this.runtime.targets[1].id;
 
-        this.storeSprite(this.runtime.targets[1].id, 'Zerg').then(
+        this.storeSprite(this.runtime.targets[1].id, {newName: 'A'}).then(
             diz => log.log('Got first storeSprite result:', diz)
         );
-        this.storeSprite(this.runtime.targets[1].id, 'Barg').then(
+        this.storeSprite(this.runtime.targets[1].id, {newName: 'B'}).then(
             diz => log.log('Got second storeSprite result:', diz)
         );
-        this.storeSprite(this.runtime.targets[1].id, 'Zong').then(
+        this.storeSprite(this.runtime.targets[1].id, {newName: 'C'}).then(
             diz => log.log('Got third storeSprite result:', diz)
         );
-        this.storeSprite(this.runtime.targets[1].id, 'Bong').then(
+        this.storeSprite(this.runtime.targets[1].id, {newName: 'D'}).then(
             diz => log.log('Got fourth storeSprite result:', diz)
         );
 
