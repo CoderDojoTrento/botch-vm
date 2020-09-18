@@ -4,6 +4,11 @@
  * for now I just prepended 'Mutant'
  * @since botch-0.1
  */
+const DEFAULT_BOTCH_SPRITES = []
+
+/* TODO commenting Scratch stuff, instead we should put first organism in the tree, see
+        https://github.com/CoderDojoTrento/botch-gui/issues/14
+
 const DEFAULT_BOTCH_SPRITES = [
     {
         name: 'Mutant Beetle',
@@ -124,5 +129,6 @@ const DEFAULT_BOTCH_SPRITES = [
         }
     }
 ];
+*/
 
 module.exports = DEFAULT_BOTCH_SPRITES;

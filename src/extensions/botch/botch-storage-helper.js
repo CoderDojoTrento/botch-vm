@@ -176,6 +176,7 @@ class BotchStorageHelper extends Helper {
             name: name,
             parentId: parentId
         };
+        this.size += 1;
         return id;
     }
 

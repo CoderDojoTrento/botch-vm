@@ -24,16 +24,99 @@ const {serializeSounds, serializeCostumes} = require('../../serialization/serial
 const StringUtil = require('../../util/string-util');
 const JSZip = require('jszip');
 
+
 class Scratch3Botch {
 
     static get BOTCH_STORAGE_HELPER_UPDATE (){
         return 'BOTCH_STORAGE_HELPER_UPDATE';
     }
 
+    /** In millisecs
+     * @since botch-0.3
+     */
+    static get STORAGE_DELAY (){
+        return 1000;
+    }
+
+    /**
+     * The key to load & store a target's botch-related state.
+     * @type {string}
+     * @since botch-0.2
+     */
+    static get STATE_KEY () {
+        return 'Botch.state';
+    }
+
+    /**
+     * The default botch-related state, to be used when a target has no existing botch state.
+     * @type {MusicState}
+     * @return {BotchState} the default state
+     * @since botch-0-2
+     */
+    static get DEFAULT_BOTCH_STATE () {
+        return {
+            type: 'undefined'
+        };
+    }
+
+    /**
+     * Food type
+     * @return {string} food type
+     * @since botch-0-2
+     */
+    static get FOOD_TYPE () {
+        return 'food';
+    }
+
+    /**
+     * Poison type
+     * @return {string} poison type
+     * @since botch-0-2
+     */
+    static get POISON_TYPE () {
+        return 'poison';
+    }
+
+    /**
+     * Organism type
+     * @return {string} organism type
+     * @since botch-0-2
+     */
+    static get ORGANISM_TYPE () {
+        return 'organism';
+    }
+
+    /**
+     * Poison type
+     * @return {string} poison type
+     * @since botch-0-2
+     */
+    static get ENEMY_TYPE () {
+        return 'enemy';
+    }
+
+    /**
+     * @return {int} maximum allowed number of sprites in storage (including parent_0).
+     * @since botch-0.3
+     */
+    static get MAX_STORAGE (){
+        return 3;
+    }
+
+    /**
+     * @return {int} Storage full code.
+     * @since botch-0.3
+     */
+    static get STORAGE_FULL (){
+        return 1;
+    }
+
     constructor (runtime) {
         this.debugMode = false;
         this.runtime = runtime;
         this.storage = this.runtime.storage;
+        this.storageQueueLength = 0;
+        this.storageLastPromise = null;
         // map that contains the organism <id, org> or enemies
         this.organismMap = new Map();
         this.enemiesMap = new Map();
@@ -196,79 +279,7 @@ class Scratch3Botch {
             }
         };
     }
-
-    /**
-     * The key to load & store a target's botch-related state.
-     * @type {string}
-     * @since botch-0.2
-     */
-    static get STATE_KEY () {
-        return 'Botch.state';
-    }
-
-    /**
-     * The default botch-related state, to be used when a target has no existing botch state.
-     * @type {MusicState}
-     * @return {BotchState} the default state
-     * @since botch-0-2
-     */
-    static get DEFAULT_BOTCH_STATE () {
-        return {
-            type: 'undefined'
-        };
-    }
-
-    /**
-     * Food type
-     * @return {string} food type
-     * @since botch-0-2
-     */
-    static get FOOD_TYPE () {
-        return 'food';
-    }
-
-    /**
-     * Poison type
-     * @return {string} poison type
-     * @since botch-0-2
-     */
-    static get POISON_TYPE () {
-        return 'poison';
-    }
-
-    /**
-     * Organism type
-     * @return {string} organism type
-     * @since botch-0-2
-     */
-    static get ORGANISM_TYPE () {
-        return 'organism';
-    }
-
-    /**
-     * Poison type
-     * @return {string} poison type
-     * @since botch-0-2
-     */
-    static get ENEMY_TYPE () {
-        return 'enemy';
-    }
-
-    /**
-     * @return {int} maximum allowed number of sprites in storage (including parent_0).
-     * @since botch-0.3
-     */
-    static get MAX_STORAGE (){
-        return 50;
-    }
-
-    /**
-     * @return {int} Storage full code.
-     * @since botch-0.3
-     */
-    static get STORAGE_FULL (){
-        return 1;
-    }
+    
 
     /**
      * @param {Target} target - collect botch state for this target.
@@ -732,21 +743,69 @@ class Scratch3Botch {
         zip.file('sprite.json', ser.spriteJson);
         this._addFileDescsToZip(ser.soundDescs.concat(ser.costumeDescs), zip);
 
-        const p = zip.generateAsync({
+        return zip.generateAsync({
             type: typeof optZipType === 'string' ? optZipType : 'blob',
             mimeType: 'application/x.scratch.sprite3',
             compression: 'DEFLATE',
             compressionOptions: {
                 level: 6
             }
-        });
-        p.md5 = theMd5; // monkey patching
-        return p;
-
+        }).then(
+            data => ({newId: theMd5, data: data})
+        );
     }
 
     static calcSpriteMd5 (spriteJson, soundDescs, costumeDescs){
         return md5(spriteJson + StringUtil.stringify(soundDescs.concat(costumeDescs)));
+    }
+
+
+    _storeSprite (id, newName = ''){
+        log.log('Botch: _storeSprite is called');
+
+        return this.exportSprite(id, 'uint8array', newName)
+            .then(({newId, data}) => {
+
+                const target = this.runtime.getTargetById(id);
+                log.log('Botch: using newId from md5:', newId);
+            
+                let parentId = 'parent_0';
+        
+                if (target.variables &&
+                target.variables.botch_parent &&
+                target.variables.botch_parent.value){
+                    const candidate = target.variables.botch_parent.value;
+                    if (candidate !== 'parent_0'){
+                        if (candidate in this.storageHelper.assets){
+                            parentId = target.variables.botch_parent.value;
+                        } else {
+                            log.warn('Trying to store sprite with parentId not in store, defaulting to parent_0');
+                        }
+                    }
+                } else {
+                    log.warn('Trying to store sprite with no valid parentId, defaulting to parent_0');
+                }
+            
+                // log.log('Botch: using newId from md5:', newId);
+
+                this.storageHelper._store(
+                    this.storage.AssetType.Sprite,
+                    this.storage.DataFormat.SB3,
+                    data,
+                    newId,
+                    newName ? newName : target.sprite.name,
+                    parentId
+                );
+                // log.log('Botch: emitting ', Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
+                this.runtime.emit(Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
+                // log.log('Botch: stored sprite with newId', newId);
+                this.storageQueueLength -= 1;
+                return {
+                    md5: newId,
+                    response: 0 // ok
+                };
+            });
+        
     }
 
     /** Stores a sprite from runtime into custom storageHelper.
@@ -764,6 +823,8 @@ class Scratch3Botch {
      */
     storeSprite (id, newName = '') {
         // log.log('Botch: trying to store sprite with original id', id);
+        
+        log.log('Botch: storeSprite storageQueue', this.storageQueue);
 
         if (!id){
             throw new Error(`Got empty id:${id}!`);
@@ -773,72 +834,42 @@ class Scratch3Botch {
                 throw new Error('Got all blank name for sprite !');
             }
         }
-        
-        
-        if (this.storageHelper.size >= Scratch3Botch.MAX_STORAGE){
-            const p = new Promise(() => ({}));
-            // const ser = this.serializeSprite(id, newName);
-            const uuidv4 = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-                const r = Math.random() * 16 | 0; const v = (c === 'x') ? r : ((r & 0x3) | 0x8);
-                return v.toString(20);
+
+        let shortP = null;
+        if ((this.storageHelper.size + this.storageQueueLength) >= Scratch3Botch.MAX_STORAGE){
+            log.log('Botch: storage full, returning early');
+                
+            const ser = this.serializeSprite(id, newName);
+            const theMd5 = Scratch3Botch.calcSpriteMd5(ser.spriteJson, ser.soundDescs, ser.costumeDescs);
+            shortP = new Promise(resolve => {
+                this.storageQueueLength -= 1;
+                resolve({
+                    md5: theMd5,
+                    response: Scratch3Botch.STORAGE_FULL
+                });
             });
-            
-              
-            p.md5 = uuidv4(); // fast and furious
-              
-            // p.md5 = Scratch3Botch.calcSpriteMd5(ser.spriteJson, ser.soundDescs, ser.costumeDescs);
-            p.response = Scratch3Botch.STORAGE_FULL;
+        }
+
+        const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+                                        
+        if (!this.storageLastPromise){
+            const p = shortP ? shortP : this._storeSprite(id, newName);
+            this.storageLastPromise = p;
+            this.storageQueueLength = 1;
             return p;
         }
-        
-        const p = this.exportSprite(id, 'uint8array', newName);
-        const newId = p.md5;
-
-        // we need it here as this method call could be asynchronous when populating
-        // and yes, it's a hack
-        this.storageHelper.size += 1;
-        
-        const retp = p.then(data => {
-
-            const target = this.runtime.getTargetById(id);
-            log.log('Botch: using newId from md5:', newId);
-            
-            let parentId = 'parent_0';
-        
-            if (target.variables &&
-                target.variables.botch_parent &&
-                target.variables.botch_parent.value){
-                const candidate = target.variables.botch_parent.value;
-                if (candidate !== 'parent_0'){
-                    if (candidate in this.storageHelper.assets){
-                        parentId = target.variables.botch_parent.value;
-                    } else {
-                        log.warn('Trying to store sprite with parentId not in store, defaulting to parent_0');
-                    }
+        // else delay after last is resolved
+        const p = this.storageLastPromise
+            .then(() => wait(Scratch3Botch.STORAGE_DELAY))
+            .then(() => {
+                if (shortP){
+                    return shortP;
                 }
-            } else {
-                log.warn('Trying to store sprite with no valid parentId, defaulting to parent_0');
-            }
-            
-            // log.log('Botch: using newId from md5:', newId);
-
-            this.storageHelper._store(
-                this.storage.AssetType.Sprite,
-                this.storage.DataFormat.SB3,
-                data,
-                newId,
-                newName ? newName : target.sprite.name,
-                parentId
-            );
-            // log.log('Botch: emitting ', Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
-            this.runtime.emit(Scratch3Botch.BOTCH_STORAGE_HELPER_UPDATE);
-            // log.log('Botch: stored sprite with newId', newId);
-
-        });
-        
-        retp.md5 = newId;
-        retp.response = 0; // ok
-        return retp;
+                return this._storeSprite(id, newName);
+            });
+        this.storageLastPromise = p;
+        this.storageQueueLength += 1;
+        return p;
     }
 
     /**
@@ -983,9 +1014,23 @@ class Scratch3Botch {
      * @since botch-0.1
      */
     testStoreSprite () {
-        log.log('BOTCH TEST: storing first sprite in custom storageHelper');
-        const id = this.runtime.targets[1].id;
+        log.log('testStoreSprite...');
+        // const id = this.runtime.targets[1].id;
 
+        this.storeSprite(this.runtime.targets[1].id, 'Zerg').then(
+            diz => log.log('Got first storeSprite result:', diz)
+        );
+        this.storeSprite(this.runtime.targets[1].id, 'Barg').then(
+            diz => log.log('Got second storeSprite result:', diz)
+        );
+        this.storeSprite(this.runtime.targets[1].id, 'Zong').then(
+            diz => log.log('Got third storeSprite result:', diz)
+        );
+        this.storeSprite(this.runtime.targets[1].id, 'Bong').then(
+            diz => log.log('Got fourth storeSprite result:', diz)
+        );
+
+        /*
         this.storeSprite(id).then(() => {
 
             this.runtime.storage.load('sb3', id).then(storedSprite => {
@@ -997,7 +1042,7 @@ class Scratch3Botch {
                     });
                 });
             });
-        });
+        });*/
     }
 
     /**
