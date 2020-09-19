@@ -187,6 +187,21 @@ class Scratch3Botch {
             });
         }));
 
+        this.runtime.on(Runtime.SCRIPT_GLOW_OFF, (params => {
+            log.log('script glowing off:', params);
+            this.resetStoragePendingRequests(params.id);
+        }));
+        this.runtime.on(Runtime.BLOCK_GLOW_OFF, params => {
+            log.log('block glowing off:', params);
+            this.resetStoragePendingRequests(params.id);
+        });
+        this.runtime.on(Runtime.STOP_FOR_TARGET, params => {
+            log.log('STOP_FOR_TARGET:', params);
+            for (const blockId in params.target.blocks._blocks){
+                this.resetStoragePendingRequests(blockId);
+            }
+        });
+
         // copy the custom state when clone
         this._onTargetCreated = this._onTargetCreated.bind(this);
         this.runtime.on('targetWasCreated', this._onTargetCreated);
@@ -890,15 +905,24 @@ class Scratch3Botch {
     }
 
     /**
-     *
+     * @param {?string} group the group to clear if provided, otherwise removes all pending requests.
      * @since botch-0.3
      */
-    resetStoragePendingRequests (){
-        // just to be extra-sure we don't have stuff around
-        for (const requestGroup in this.storageRequests){
-            this.storageRequests[requestGroup].clear();
+    resetStoragePendingRequests (group){
+
+        if (group){
+            if (this.storageRequests[group]){
+                this.storageRequests[group].clear();
+                delete this.storageRequests[group];
+            }
+        } else {
+            // just to be extra-sure we don't have stuff around
+            for (const requestGroup in this.storageRequests){
+                this.storageRequests[requestGroup].clear();
+            }
+            this.storageRequests = [];
         }
-        this.storageRequests = [];
+        
     }
     
     /**
