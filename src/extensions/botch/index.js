@@ -189,15 +189,16 @@ class Scratch3Botch {
 
         this.runtime.on(Runtime.SCRIPT_GLOW_OFF, (params => {
             log.log('script glowing off:', params);
-            this.resetStoragePendingRequests(params.id);
+            
+            this.resetStoragePendingRequests(params.id); // blockId
         }));
         this.runtime.on(Runtime.BLOCK_GLOW_OFF, params => {
             log.log('block glowing off:', params);
-            this.resetStoragePendingRequests(params.id);
+            this.resetStoragePendingRequests(params.id); // blockId
         });
-        this.runtime.on(Runtime.STOP_FOR_TARGET, params => {
-            log.log('STOP_FOR_TARGET:', params);
-            for (const blockId in params.target.blocks._blocks){
+        this.runtime.on(Runtime.STOP_FOR_TARGET, target => {
+            log.log('STOP_FOR_TARGET:', target);
+            for (const blockId in target.blocks._blocks){
                 this.resetStoragePendingRequests(blockId);
             }
         });
